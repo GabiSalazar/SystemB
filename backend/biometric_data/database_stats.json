@@ -1,0 +1,19 @@
+{
+  "total_users": 0,
+  "total_templates": 0,
+  "total_verifications": 0,
+  "successful_verifications": 0,
+  "anatomical_templates": 0,
+  "dynamic_templates": 0,
+  "multimodal_templates": 0,
+  "excellent_quality": 0,
+  "good_quality": 0,
+  "fair_quality": 0,
+  "poor_quality": 0,
+  "total_size_mb": 8.253142356872559,
+  "index_size_mb": 0.0,
+  "backup_size_mb": 0.0,
+  "avg_search_time_ms": 0.0,
+  "cache_hit_rate": 0.0,
+  "last_updated": 1760144814.580843
+}

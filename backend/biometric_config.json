@@ -1,0 +1,227 @@
+{
+    "capture": {
+        "samples_per_gesture": 7,
+        "gestures_per_user": 3,
+        "total_captures_formula": "samples_per_gesture * gestures_per_user",
+        "required_stable_frames": 3,
+        "capture_delay_seconds": 2,
+        "enhancement_enabled": true
+    },
+    "thresholds": {
+        "hand_confidence": 0.9,
+        "gesture_confidence": 0.6,
+        "movement_threshold": 0.008,
+        "target_hand_size": 0.22,
+        "size_tolerance": 0.06,
+        "visibility_margin": 0.05
+    },
+    "camera": {
+        "width": 1280,
+        "height": 720,
+        "fps_target": 30,
+        "autofocus": true,
+        "brightness": 300,
+        "contrast": 300,
+        "jpeg_quality": 95,
+        "warmup_frames": 30
+    },
+    "mediapipe": {
+        "hands": {
+            "static_image_mode": false,
+            "max_num_hands": 1,
+            "model_complexity": 1,
+            "min_detection_confidence": 0.8,
+            "min_tracking_confidence": 0.8
+        },
+        "gesture_recognizer": {
+            "num_hands": 1,
+            "min_hand_detection_confidence": 0.8,
+            "min_hand_presence_confidence": 0.8,
+            "min_tracking_confidence": 0.8
+        }
+    },
+    "roi_normalization": {
+        "min_roi_width": 150,
+        "max_roi_width": 600,
+        "target_size": [
+            224,
+            224
+        ],
+        "roi_padding": 0.15,
+        "apply_sharpening": true,
+        "apply_contrast": false
+    },
+    "paths": {
+        "data_root": "biometric_data",
+        "logs": "biometric_data/logs",
+        "base_captures": "biometric_data/capturas",
+        "models": "biometric_data/models",
+        "biometric_db": "biometric_data",
+        "templates": "biometric_data/templates",
+        "user_profiles": "biometric_data/user_profiles",
+        "training_data": "biometric_data/training_data",
+        "backups": "biometric_data/backups",
+        "cache": "biometric_data/cache",
+        "model_file": "gesture_recognizer.task"
+    },
+    "biometric": {
+        "enrollment": {
+            "min_samples_per_gesture": 10,
+            "max_samples_per_gesture": 20,
+            "quality_threshold": 0.6,
+            "timeout_seconds": 300,
+            "auto_save": true
+        },
+        "authentication": {
+            "max_attempts": 3,
+            "timeout_seconds": 30,
+            "similarity_threshold": 0.75,
+            "enable_1_to_n": true,
+            "enable_1_to_1": true
+        },
+        "siamese_networks": {
+            "anatomical": {
+                "embedding_dim": 128,
+                "input_dim": 180,
+                "learning_rate": 0.001,
+                "batch_size": 32,
+                "epochs": 100,
+                "patience": 15,
+                "validation_split": 0.2
+            },
+            "dynamic": {
+                "sequence_length": 50,
+                "feature_dim": 320,
+                "embedding_dim": 128,
+                "learning_rate": 0.0005,
+                "batch_size": 16,
+                "epochs": 150,
+                "patience": 20,
+                "validation_split": 0.2
+            }
+        },
+        "feature_extraction": {
+            "anatomical_features": [
+                "finger_lengths",
+                "palm_dimensions",
+                "joint_angles",
+                "finger_spreads",
+                "palm_curvature",
+                "hand_proportions",
+                "landmark_distances",
+                "geometric_ratios"
+            ],
+            "dynamic_features": [
+                "transition_velocities",
+                "acceleration_patterns",
+                "gesture_timing",
+                "movement_trajectories",
+                "pressure_patterns",
+                "rhythm_analysis"
+            ]
+        },
+        "database": {
+            "encryption_enabled": true,
+            "search_strategy": "lsh",
+            "cache_size": 1000,
+            "auto_backup": true,
+            "max_templates_per_user": 50
+        }
+    },
+    "available_gestures": [
+        "None",
+        "Closed_Fist",
+        "Open_Palm",
+        "Pointing_Up",
+        "Thumb_Down",
+        "Thumb_Up",
+        "Victory",
+        "ILoveYou"
+    ],
+    "reference_area": {
+        "gesture_areas": {
+            "Pointing_Up": {
+                "width_ratio": 0.4,
+                "height_ratio": 0.8,
+                "center_y_offset": 0.55
+            },
+            "Victory": {
+                "width_ratio": 0.45,
+                "height_ratio": 0.75,
+                "center_y_offset": 0.52
+            },
+            "Thumb_Up": {
+                "width_ratio": 0.4,
+                "height_ratio": 0.7,
+                "center_y_offset": 0.5
+            },
+            "Thumb_Down": {
+                "width_ratio": 0.4,
+                "height_ratio": 0.7,
+                "center_y_offset": 0.5
+            },
+            "ILoveYou": {
+                "width_ratio": 0.5,
+                "height_ratio": 0.75,
+                "center_y_offset": 0.5
+            },
+            "Open_Palm": {
+                "width_ratio": 0.45,
+                "height_ratio": 0.6,
+                "center_y_offset": 0.5
+            },
+            "Closed_Fist": {
+                "width_ratio": 0.45,
+                "height_ratio": 0.6,
+                "center_y_offset": 0.5
+            },
+            "default": {
+                "width_ratio": 0.45,
+                "height_ratio": 0.6,
+                "center_y_offset": 0.5
+            }
+        },
+        "corner_size": 20,
+        "line_thickness": 3,
+        "colors": {
+            "area_outline": [
+                0,
+                255,
+                255
+            ],
+            "valid": [
+                0,
+                255,
+                0
+            ],
+            "invalid": [
+                0,
+                0,
+                255
+            ],
+            "warning": [
+                0,
+                165,
+                255
+            ],
+            "info": [
+                255,
+                255,
+                0
+            ],
+            "text": [
+                255,
+                255,
+                255
+            ]
+        }
+    },
+    "system": {
+        "debug_mode": false,
+        "performance_monitoring": true,
+        "auto_cleanup": true,
+        "max_log_files": 10,
+        "log_retention_days": 30,
+        "enable_metrics": true
+    }
+}
