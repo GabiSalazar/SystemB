@@ -1,12 +1,15 @@
 """
 API Endpoints para Enrollment System
 Integración completa con RealEnrollmentSystem del core
+VERSIÓN CORREGIDA: Recibe frames desde el frontend
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, File, UploadFile
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import logging
+import cv2
+import numpy as np
 
 from app.core.enrollment_system import (
     get_real_enrollment_system,
@@ -50,7 +53,6 @@ class FrameProcessResponse(BaseModel):
     """Response de procesamiento de frame"""
     session_id: str
     status: str
-    phase: str
     progress: float
     current_gesture: str
     current_gesture_index: int
@@ -58,9 +60,8 @@ class FrameProcessResponse(BaseModel):
     samples_collected: int
     samples_needed: int
     sample_captured: bool
-    is_real_processing: bool
-    bootstrap_mode: bool
-    visual_feedback: Optional[Dict[str, Any]] = None
+    session_completed: bool
+    message: Optional[str] = None
 
 
 class StatusResponse(BaseModel):
@@ -69,11 +70,11 @@ class StatusResponse(BaseModel):
     user_id: str
     username: str
     status: str
-    phase: str
     progress_percentage: float
-    duration: float
-    is_real_session: bool
-    bootstrap_mode: bool
+    current_gesture: str
+    samples_collected: int
+    samples_needed: int
+    session_completed: bool
 
 
 class StatsResponse(BaseModel):
@@ -81,9 +82,7 @@ class StatsResponse(BaseModel):
     enrollment_stats: Dict[str, Any]
     active_sessions: int
     total_users_in_db: int
-    database_stats: Dict[str, Any]
-    config: Dict[str, Any]
-    system_status: Dict[str, Any]
+    bootstrap_mode: bool
 
 
 # ====================================================================
@@ -129,19 +128,37 @@ async def start_enrollment(request: EnrollmentStartRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error iniciando enrollment: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 
-@router.get("/enrollment/{session_id}/frame", response_model=FrameProcessResponse)
-async def process_enrollment_frame(session_id: str):
+@router.post("/enrollment/{session_id}/frame", response_model=FrameProcessResponse)
+async def process_enrollment_frame(
+    session_id: str,
+    frame: UploadFile = File(..., description="Frame de cámara en formato JPEG")
+):
     """
-    Procesa un frame para la sesión de enrollment.
-    Incluye feedback visual en tiempo real.
+    Procesa un frame enviado desde el frontend.
+    El frame debe ser una imagen JPEG capturada desde la cámara del navegador.
     """
     try:
         enrollment_system = get_real_enrollment_system()
         
-        result = enrollment_system.process_enrollment_frame(session_id)
+        # Leer el frame del archivo
+        frame_data = await frame.read()
+        
+        # Convertir bytes a imagen OpenCV
+        nparr = np.frombuffer(frame_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise HTTPException(status_code=400, detail="Frame inválido")
+        
+        logger.info(f"Frame recibido: shape={img.shape}, dtype={img.dtype}")
+        
+        # Procesar frame CON la imagen recibida
+        result = enrollment_system.process_enrollment_frame_with_image(session_id, img)
         
         if 'error' in result:
             raise HTTPException(status_code=404, detail=result['error'])
@@ -152,6 +169,8 @@ async def process_enrollment_frame(session_id: str):
         raise
     except Exception as e:
         logger.error(f"Error procesando frame: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -163,12 +182,22 @@ async def get_enrollment_status(session_id: str):
     try:
         enrollment_system = get_real_enrollment_system()
         
-        status = enrollment_system.get_enrollment_status(session_id)
+        if session_id not in enrollment_system.active_sessions:
+            raise HTTPException(status_code=404, detail="Sesión no encontrada")
         
-        if 'error' in status:
-            raise HTTPException(status_code=404, detail=status['error'])
+        session = enrollment_system.active_sessions[session_id]
         
-        return StatusResponse(**status)
+        return StatusResponse(
+            session_id=session_id,
+            user_id=session.user_id,
+            username=session.username,
+            status=session.status.value,
+            progress_percentage=(len(session.samples) / session.total_samples_needed * 100) if session.total_samples_needed > 0 else 0,
+            current_gesture=session.current_gesture,
+            samples_collected=len(session.samples),
+            samples_needed=session.total_samples_needed,
+            session_completed=(len(session.samples) >= session.total_samples_needed)
+        )
         
     except HTTPException:
         raise
@@ -211,9 +240,12 @@ async def get_enrollment_stats():
     try:
         enrollment_system = get_real_enrollment_system()
         
-        stats = enrollment_system.get_system_stats()
-        
-        return StatsResponse(**stats)
+        return StatsResponse(
+            enrollment_stats=enrollment_system.stats,
+            active_sessions=len(enrollment_system.active_sessions),
+            total_users_in_db=len(enrollment_system.database.list_users()),
+            bootstrap_mode=enrollment_system.bootstrap_mode
+        )
         
     except Exception as e:
         logger.error(f"Error obteniendo estadísticas: {e}")

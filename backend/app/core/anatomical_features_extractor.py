@@ -113,7 +113,14 @@ class AnatomicalFeaturesExtractor:
         logger.info("AnatomicalFeaturesExtractor inicializado")
     
     def _load_feature_config(self) -> Dict[str, Any]:
-        """Carga configuración para extracción de características."""
+        """
+        Carga configuración para extracción de características.
+        Implementa merge explícito con defaults para garantizar robustez.
+        
+        Returns:
+            Diccionario con configuración completa y validada
+        """
+        # Configuración por defecto completa
         default_config = {
             'normalize_features': True,
             'use_world_landmarks': True,
@@ -123,7 +130,37 @@ class AnatomicalFeaturesExtractor:
             'angle_smoothing_factor': 0.1
         }
         
-        return get_config('biometric.feature_extraction', default_config)
+        try:
+            # Intentar cargar configuración del sistema
+            loaded_config = get_config('biometric.feature_extraction', None)
+            
+            # Caso 1: No hay configuración en el sistema
+            if loaded_config is None:
+                logger.info("Feature extraction config: usando defaults (no existe en sistema)")
+                return default_config
+            
+            # Caso 2: Configuración no es un diccionario (error de config)
+            if not isinstance(loaded_config, dict):
+                logger.warning(f"Feature extraction config: tipo inválido ({type(loaded_config)}), usando defaults")
+                return default_config
+            
+            # Caso 3: Merge con defaults para garantizar todas las claves
+            merged_config = default_config.copy()
+            merged_config.update(loaded_config)
+            
+            # Validar que todas las claves críticas existen
+            required_keys = ['outlier_threshold', 'normalize_features', 'use_world_landmarks']
+            missing_keys = [key for key in required_keys if key not in merged_config]
+            
+            if missing_keys:
+                logger.warning(f"Feature extraction config: claves faltantes {missing_keys}, agregadas desde defaults")
+            
+            logger.info(f"Feature extraction config cargada: {len(merged_config)} parámetros")
+            return merged_config
+            
+        except Exception as e:
+            logger.error(f"Error cargando feature extraction config: {e}, usando defaults")
+            return default_config
     
     def _define_landmark_structure(self) -> Dict[str, Dict[str, List[int]]]:
         """Define la estructura de landmarks MediaPipe para cada parte de la mano."""

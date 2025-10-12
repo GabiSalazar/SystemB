@@ -862,6 +862,72 @@ class RealEnrollmentWorkflow:
                 error_callback(str(e))
             raise
     
+
+    def _finalize_enrollment_session(self, session: RealEnrollmentSession) -> Dict[str, Any]:
+        """Finaliza enrollment y genera templates."""
+        try:
+            logger.info("Generando templates biométricos...")
+            
+            # Generar templates usando el workflow
+            templates = self.workflow.template_generator.generate_real_templates(
+                session.samples,
+                session.user_id,
+                self.bootstrap_mode
+            )
+            
+            logger.info(f"✅ {len(templates)} templates generados")
+            
+            # Guardar en base de datos
+            for template in templates:
+                self.database.store_biometric_template(template)
+            
+            # Guardar perfil de usuario
+            from app.core.biometric_database import UserProfile
+            
+            user_profile = UserProfile(
+                user_id=session.user_id,
+                username=session.username,
+                gesture_sequence=session.gesture_sequence,
+                total_enrollments=1,
+                metadata={
+                    'enrollment_date': time.time(),
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+            )
+            
+            self.database.store_user_profile(user_profile)
+            
+            logger.info(f"✅ Usuario {session.user_id} registrado exitosamente")
+            
+            # Marcar sesión como completada
+            session.status = EnrollmentStatus.COMPLETED
+            
+            return {
+                'session_id': session.session_id,
+                'status': 'completed',
+                'progress': 100.0,
+                'current_gesture': session.current_gesture,
+                'current_gesture_index': session.current_gesture_index,
+                'total_gestures': len(session.gesture_sequence),
+                'samples_collected': len(session.samples),
+                'samples_needed': session.total_samples_needed,
+                'sample_captured': False,
+                'session_completed': True,
+                'templates_generated': len(templates),
+                'message': '¡Enrollment completado exitosamente!'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error finalizando enrollment: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return {
+                'error': f'Error generando templates: {str(e)}',
+                'session_id': session.session_id,
+                'status': 'error',
+                'session_completed': False
+            }
+        
     def _initialize_real_components(self) -> bool:
         """Inicializa componentes para captura REAL."""
         try:
@@ -2166,6 +2232,272 @@ class RealEnrollmentSystem:
             if error_callback:
                 error_callback(str(e))
             raise
+    
+
+    def process_enrollment_frame_with_image(self, session_id: str, frame_image: np.ndarray) -> Dict[str, Any]:
+        """
+        Procesa un frame de enrollment recibido desde el frontend.
+        
+        Args:
+            session_id: ID de la sesión activa
+            frame_image: Imagen OpenCV (numpy array BGR)
+            
+        Returns:
+            Diccionario con el resultado del procesamiento
+        """
+        try:
+            logger.info(f"🎥 Procesando frame para sesión {session_id}")
+            logger.info(f"   Frame shape: {frame_image.shape}")
+            
+            if session_id not in self.active_sessions:
+                logger.error(f"❌ Sesión {session_id} no encontrada")
+                return {
+                    'error': 'Sesión no encontrada',
+                    'session_id': session_id,
+                    'status': 'error',
+                    'phase': 'error',
+                    'progress': 0,
+                    'current_gesture': '',
+                    'current_gesture_index': 0,
+                    'total_gestures': 0,
+                    'samples_collected': 0,
+                    'samples_needed': 0,
+                    'sample_captured': False,
+                    'session_completed': False,
+                    'is_real_processing': True,
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+            
+            session = self.active_sessions[session_id]
+            
+            # ✅ Procesar frame directamente con MediaPipe
+            processing_result = self.workflow.mediapipe_processor.process_frame(frame_image)
+
+            # Verificar si se detectó mano
+            if not processing_result or not processing_result.hand_result or not processing_result.hand_result.is_valid:
+                return {
+                    'session_id': session_id,
+                    'status': session.status.value,
+                    'phase': session.current_phase.value,
+                    'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                    'current_gesture': session.current_gesture,
+                    'current_gesture_index': session.current_gesture_index,
+                    'total_gestures': len(session.gesture_sequence),
+                    'samples_collected': len(session.samples),
+                    'samples_needed': session.total_samples_needed,
+                    'sample_captured': False,
+                    'session_completed': False,
+                    'message': 'No se detectó mano',
+                    'is_real_processing': True,
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+
+            hand_result = processing_result.hand_result
+            gesture_result = processing_result.gesture_result
+            
+            # Verificar confianza básica
+            if hand_result.confidence < 0.8:
+                return {
+                    'session_id': session_id,
+                    'status': session.status.value,
+                    'phase': session.current_phase.value,
+                    'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                    'current_gesture': session.current_gesture,
+                    'current_gesture_index': session.current_gesture_index,
+                    'total_gestures': len(session.gesture_sequence),
+                    'samples_collected': len(session.samples),
+                    'samples_needed': session.total_samples_needed,
+                    'sample_captured': False,
+                    'session_completed': False,
+                    'message': f'Confianza baja: {hand_result.confidence:.2f}',
+                    'is_real_processing': True,
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+            
+            # Verificar gesto correcto
+            detected_gesture = gesture_result.gesture_name if gesture_result else None
+            if detected_gesture != session.current_gesture:
+                return {
+                    'session_id': session_id,
+                    'status': session.status.value,
+                    'phase': session.current_phase.value,
+                    'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                    'current_gesture': session.current_gesture,
+                    'current_gesture_index': session.current_gesture_index,
+                    'total_gestures': len(session.gesture_sequence),
+                    'samples_collected': len(session.samples),
+                    'samples_needed': session.total_samples_needed,
+                    'sample_captured': False,
+                    'session_completed': False,
+                    'message': f'Gesto incorrecto. Esperado: {session.current_gesture}, Detectado: {detected_gesture or "Ninguno"}',
+                    'is_real_processing': True,
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+            
+            # Control de tiempo entre capturas
+            current_time = time.time()
+            if session.last_capture_time > 0:
+                time_since_last = current_time - session.last_capture_time
+                if time_since_last < 1.5:
+                    return {
+                        'session_id': session_id,
+                        'status': session.status.value,
+                        'phase': session.current_phase.value,
+                        'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                        'current_gesture': session.current_gesture,
+                        'current_gesture_index': session.current_gesture_index,
+                        'total_gestures': len(session.gesture_sequence),
+                        'samples_collected': len(session.samples),
+                        'samples_needed': session.total_samples_needed,
+                        'sample_captured': False,
+                        'session_completed': False,
+                        'message': 'Espera un momento entre capturas',
+                        'is_real_processing': True,
+                        'bootstrap_mode': self.bootstrap_mode
+                    }
+            
+            # ✅ CAPTURA VÁLIDA - Extraer características
+            try:
+                anatomical_features = self.workflow.anatomical_extractor.extract_features(
+                    hand_result.landmarks,
+                    hand_result.world_landmarks,
+                    hand_result.handedness.classification[0].label if hand_result.handedness else 'unknown'
+                )
+                
+                if not anatomical_features:
+                    logger.error("Error extrayendo características anatómicas")
+                    return {
+                        'session_id': session_id,
+                        'status': session.status.value,
+                        'phase': session.current_phase.value,
+                        'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                        'current_gesture': session.current_gesture,
+                        'current_gesture_index': session.current_gesture_index,
+                        'total_gestures': len(session.gesture_sequence),
+                        'samples_collected': len(session.samples),
+                        'samples_needed': session.total_samples_needed,
+                        'sample_captured': False,
+                        'session_completed': False,
+                        'message': 'Error extrayendo características',
+                        'is_real_processing': True,
+                        'bootstrap_mode': self.bootstrap_mode
+                    }
+                
+            except Exception as e:
+                logger.error(f"Error extrayendo características: {e}")
+                return {
+                    'session_id': session_id,
+                    'status': session.status.value,
+                    'phase': session.current_phase.value,
+                    'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                    'current_gesture': session.current_gesture,
+                    'current_gesture_index': session.current_gesture_index,
+                    'total_gestures': len(session.gesture_sequence),
+                    'samples_collected': len(session.samples),
+                    'samples_needed': session.total_samples_needed,
+                    'sample_captured': False,
+                    'session_completed': False,
+                    'message': f'Error: {str(e)}',
+                    'is_real_processing': True,
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+            
+            # Crear muestra
+            sample_number = len([s for s in session.samples if s.gesture_name == session.current_gesture]) + 1
+            sample_id = f"{session.session_id}_{session.current_gesture}_{sample_number}"
+            
+            sample = RealEnrollmentSample(
+                sample_id=sample_id,
+                user_id=session.user_id,
+                sample_type=SampleType.COMBINED,
+                gesture_name=session.current_gesture,
+                anatomical_features=anatomical_features,
+                dynamic_features=None,  # Simplificado por ahora
+                quality_assessment=None,
+                confidence=gesture_result.confidence if gesture_result else 0.0,
+                timestamp=current_time,
+                capture_duration=current_time - session.start_time,
+                frame_count=session.frames_processed + 1
+            )
+            
+            sample.is_valid = True
+            session.samples.append(sample)
+            session.last_capture_time = current_time
+            session.frames_processed += 1
+            
+            logger.info(f"✅ Muestra capturada: {len(session.samples)}/{session.total_samples_needed}")
+            
+            # Verificar si completó el gesto actual
+            samples_this_gesture = sum(1 for s in session.samples if s.gesture_name == session.current_gesture)
+            
+            response_base = {
+                'session_id': session_id,
+                'status': session.status.value,
+                'phase': session.current_phase.value,
+                'progress': (len(session.samples) / session.total_samples_needed) * 100,
+                'current_gesture': session.current_gesture,
+                'current_gesture_index': session.current_gesture_index,
+                'total_gestures': len(session.gesture_sequence),
+                'samples_collected': len(session.samples),
+                'samples_needed': session.total_samples_needed,
+                'is_real_processing': True,
+                'bootstrap_mode': self.bootstrap_mode
+            }
+            
+            if samples_this_gesture >= self.config.samples_per_gesture:
+                session.current_gesture_index += 1
+                
+                if session.current_gesture_index < len(session.gesture_sequence):
+                    session.current_gesture = session.gesture_sequence[session.current_gesture_index]
+                    logger.info(f"➡️ Siguiente gesto: {session.current_gesture}")
+                else:
+                    # COMPLETADO
+                    logger.info("🎉 Todas las muestras recolectadas!")
+                    session.status = EnrollmentStatus.COMPLETED
+                    session.current_phase = EnrollmentPhase.ENROLLMENT_COMPLETE
+                    
+                    # Finalizar enrollment
+                    self._finalize_real_session(session)
+                    
+                    return {
+                        **response_base,
+                        'status': EnrollmentStatus.COMPLETED.value,
+                        'phase': EnrollmentPhase.ENROLLMENT_COMPLETE.value,
+                        'progress': 100.0,
+                        'session_completed': True,
+                        'sample_captured': True,
+                        'message': '¡Enrollment completado exitosamente!'
+                    }
+            
+            return {
+                **response_base,
+                'status': EnrollmentStatus.COLLECTING_SAMPLES.value,
+                'phase': EnrollmentPhase.SAMPLE_COLLECTION.value,
+                'sample_captured': True,
+                'session_completed': False,
+                'message': f'Muestra {samples_this_gesture}/{self.config.samples_per_gesture} capturada'
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error procesando frame: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return {
+                'error': str(e),
+                'session_id': session_id,
+                'status': EnrollmentStatus.FAILED.value,
+                'phase': EnrollmentPhase.ENROLLMENT_COMPLETE.value,
+                'progress': 0,
+                'current_gesture': '',
+                'current_gesture_index': 0,
+                'total_gestures': 0,
+                'samples_collected': 0,
+                'samples_needed': 0,
+                'sample_captured': False,
+                'session_completed': False,
+                'is_real_processing': True,
+                'bootstrap_mode': self.bootstrap_mode
+            }
     
     def process_enrollment_frame(self, session_id: str) -> Dict[str, Any]:
         """

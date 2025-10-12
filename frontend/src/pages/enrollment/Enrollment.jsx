@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { enrollmentApi } from '../../lib/api/enrollment'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge, Spinner } from '../../components/ui'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge } from '../../components/ui'
 import WebcamCapture from '../../components/camera/WebcamCapture'
 import { UserPlus, CheckCircle, XCircle, Camera, Hand } from 'lucide-react'
 
 export default function Enrollment() {
-  const [step, setStep] = useState('form') // form, capture, success
+  const [step, setStep] = useState('form')
   const [userId, setUserId] = useState('')
   const [username, setUsername] = useState('')
   const [selectedGestures, setSelectedGestures] = useState([])
@@ -51,7 +51,20 @@ export default function Enrollment() {
     }
   }
 
-  
+  const handleFrameCapture = async (frameBlob) => {
+    if (!sessionId) return
+
+    try {
+      const response = await enrollmentApi.processFrame(sessionId, frameBlob)
+      setSessionStatus(response)
+
+      if (response.session_completed) {
+        setStep('success')
+      }
+    } catch (err) {
+      console.error('Error procesando frame:', err)
+    }
+  }
 
   const handleCancel = async () => {
     if (sessionId) {
@@ -74,39 +87,13 @@ export default function Enrollment() {
     setError(null)
   }
 
-  // Polling de estado cada 500ms durante captura
-  // Polling de frames cada 100ms durante captura
-    useEffect(() => {
-        if (step === 'capture' && sessionId) {
-            const interval = setInterval(async () => {
-            try {
-                // Procesar frame (el backend procesa desde su cámara)
-                const frameResult = await enrollmentApi.processFrame(sessionId)
-                setSessionStatus(frameResult)
-
-                // Si se completó la sesión
-                if (frameResult.session_completed) {
-                setStep('success')
-                clearInterval(interval)
-                }
-            } catch (err) {
-                console.error('Error procesando frame:', err)
-            }
-            }, 100) // Polling cada 100ms
-
-            return () => clearInterval(interval)
-        }
-    }, [step, sessionId])
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Registro de Usuarios</h1>
         <p className="text-gray-600 mt-1">Sistema de enrollment biométrico por gestos</p>
       </div>
 
-      {/* Formulario */}
       {step === 'form' && (
         <Card>
           <CardHeader>
@@ -120,7 +107,6 @@ export default function Enrollment() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Datos del usuario */}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -149,7 +135,6 @@ export default function Enrollment() {
               </div>
             </div>
 
-            {/* Selección de gestos */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
@@ -161,7 +146,7 @@ export default function Enrollment() {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {availableGestures.map((gesture, index) => (
+                {availableGestures.map((gesture) => (
                   <button
                     key={gesture}
                     onClick={() => handleGestureToggle(gesture)}
@@ -224,12 +209,7 @@ export default function Enrollment() {
               disabled={!userId || !username || selectedGestures.length !== 3 || loading}
               className="w-full"
             >
-              {loading ? (
-                <>
-                  <Spinner size="sm" className="mr-2" />
-                  Iniciando...
-                </>
-              ) : (
+              {loading ? 'Iniciando...' : (
                 <>
                   <Camera className="w-4 h-4 mr-2" />
                   Iniciar Captura
@@ -240,10 +220,8 @@ export default function Enrollment() {
         </Card>
       )}
 
-      {/* Captura */}
       {step === 'capture' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Vista de cámara */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
@@ -254,6 +232,7 @@ export default function Enrollment() {
               </CardHeader>
               <CardContent>
                 <WebcamCapture
+                  onFrame={handleFrameCapture}
                   isActive={step === 'capture'}
                 />
               </CardContent>
@@ -266,20 +245,19 @@ export default function Enrollment() {
             </Card>
           </div>
 
-          {/* Panel de progreso */}
           <div>
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Progreso</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {sessionStatus && (
+                {sessionStatus ? (
                   <>
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Completado</span>
                         <span className="text-sm font-bold">
-                          {sessionStatus.progress || 0}%
+                          {Math.round(sessionStatus.progress || 0)}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -308,7 +286,19 @@ export default function Enrollment() {
                         {sessionStatus.samples_collected || 0} / {sessionStatus.samples_needed || 21}
                       </p>
                     </div>
+
+                    {sessionStatus.message && (
+                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-xs text-yellow-800">
+                          {sessionStatus.message}
+                        </p>
+                      </div>
+                    )}
                   </>
+                ) : (
+                  <div className="text-center py-8 text-gray-400 text-sm">
+                    Inicializando...
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -316,7 +306,6 @@ export default function Enrollment() {
         </div>
       )}
 
-      {/* Éxito */}
       {step === 'success' && (
         <Card>
           <CardContent className="pt-12 pb-12 text-center">

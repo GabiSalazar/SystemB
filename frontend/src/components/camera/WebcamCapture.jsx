@@ -2,10 +2,12 @@ import { useRef, useEffect, useState } from 'react'
 import { Camera, CameraOff } from 'lucide-react'
 import { Button } from '../ui'
 
-export default function WebcamCapture({ isActive = true }) {
+export default function WebcamCapture({ onFrame, isActive = true }) {
   const videoRef = useRef(null)
+  const canvasRef = useRef(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState(null)
+  const intervalRef = useRef(null)
 
   useEffect(() => {
     if (isActive) {
@@ -16,6 +18,21 @@ export default function WebcamCapture({ isActive = true }) {
 
     return () => stopCamera()
   }, [isActive])
+
+  useEffect(() => {
+    if (isStreaming && onFrame) {
+      // Capturar y enviar frames cada 200ms (5 fps)
+      intervalRef.current = setInterval(() => {
+        captureAndSendFrame()
+      }, 200)
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [isStreaming, onFrame])
 
   const startCamera = async () => {
     try {
@@ -39,11 +56,43 @@ export default function WebcamCapture({ isActive = true }) {
   }
 
   const stopCamera = () => {
+    // Detener intervalo de captura
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
+    // Detener stream de cámara
     if (videoRef.current?.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks()
       tracks.forEach(track => track.stop())
       videoRef.current.srcObject = null
       setIsStreaming(false)
+    }
+  }
+
+  const captureAndSendFrame = () => {
+    if (videoRef.current && canvasRef.current && onFrame) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      
+      // Asegurarse de que el video tenga dimensiones válidas
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        return
+      }
+      
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(video, 0, 0)
+      
+      // Convertir a blob JPEG con calidad 90%
+      canvas.toBlob((blob) => {
+        if (blob && onFrame) {
+          onFrame(blob)
+        }
+      }, 'image/jpeg', 0.9)
     }
   }
 
@@ -74,21 +123,16 @@ export default function WebcamCapture({ isActive = true }) {
             className="w-full rounded-lg bg-gray-900"
           />
           
+          {/* Canvas oculto para captura de frames */}
+          <canvas ref={canvasRef} className="hidden" />
+          
           {isStreaming && (
-            <>
-              <div className="absolute top-4 right-4">
-                <div className="flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  VISTA PREVIA
-                </div>
+            <div className="absolute top-4 right-4">
+              <div className="flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                CAPTURANDO
               </div>
-              
-              <div className="absolute bottom-4 left-4 right-4">
-                <div className="bg-black/70 text-white px-4 py-2 rounded-lg text-sm">
-                  ℹ️ El procesamiento se realiza en el servidor con su propia cámara
-                </div>
-              </div>
-            </>
+            </div>
           )}
         </>
       )}

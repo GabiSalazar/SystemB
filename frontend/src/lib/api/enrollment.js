@@ -11,9 +11,20 @@ export const enrollmentApi = {
     return data
   },
 
-  // Procesar frame (polling - NO se envía el frame, se procesa del buffer interno)
-  processFrame: async (sessionId) => {
-    const { data } = await apiClient.get(`/enrollment/${sessionId}/frame`)
+  // Procesar frame ENVIANDO la imagen desde el navegador
+  processFrame: async (sessionId, frameBlob) => {
+    const formData = new FormData()
+    formData.append('frame', frameBlob, 'frame.jpg')
+    
+    const { data } = await apiClient.post(
+      `/enrollment/${sessionId}/frame`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
     return data
   },
 
