@@ -39,7 +39,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -59,7 +59,7 @@ def log_warning(message: str):
 
 @dataclass
 class RealDynamicSample:
-    """Muestra de secuencia dinámica temporal REAL de usuario."""
+    """Muestra de secuencia dinámica temporal de usuario."""
     user_id: str
     sequence_id: str
     temporal_features: np.ndarray
@@ -73,7 +73,7 @@ class RealDynamicSample:
 
 @dataclass
 class RealTemporalPair:
-    """Par de secuencias temporales REALES para entrenamiento."""
+    """Par de secuencias temporales para entrenamiento."""
     sample1: RealDynamicSample
     sample2: RealDynamicSample
     is_genuine: bool
@@ -83,7 +83,7 @@ class RealTemporalPair:
 
 @dataclass
 class RealTemporalMetrics:
-    """Métricas específicas REALES para evaluación temporal."""
+    """Métricas específicas para evaluación temporal."""
     far: float
     frr: float
     eer: float
@@ -101,7 +101,7 @@ class RealTemporalMetrics:
 
 @dataclass
 class RealTemporalTrainingHistory:
-    """Historial de entrenamiento REAL para modelo temporal."""
+    """Historial de entrenamiento para modelo temporal."""
     loss: List[float] = field(default_factory=list)
     val_loss: List[float] = field(default_factory=list)
     accuracy: List[float] = field(default_factory=list)
@@ -119,15 +119,17 @@ class RealTemporalTrainingHistory:
 
 class RealSiameseDynamicNetwork:
     """
-    Red Siamesa REAL para autenticación biométrica basada en características dinámicas temporales.
-    Implementa arquitectura twin network con BiLSTM para procesar secuencias.
+    Red Siamesa para autenticación biométrica basada en características dinámicas temporales.
+    Implementa arquitectura twin network con LSTM/BiLSTM para procesar secuencias.
     """
     
     def __init__(self, embedding_dim: int = 128, sequence_length: int = 50, feature_dim: int = 320):
-        """Inicializa la red siamesa dinámica REAL."""
+        """Inicializa la red siamesa dinámica."""
         
         if not TF_AVAILABLE:
             raise ImportError("TensorFlow no disponible")
+        
+        self.logger = get_logger()
         
         # Configuración del modelo
         self.embedding_dim = embedding_dim
@@ -140,7 +142,7 @@ class RealSiameseDynamicNetwork:
         self.siamese_model = None
         self.is_compiled = False
         
-        # Estado de entrenamiento REAL
+        # Estado de entrenamiento
         self.training_history = RealTemporalTrainingHistory()
         self.is_trained = False
         self.optimal_threshold = 0.5
@@ -156,10 +158,10 @@ class RealSiameseDynamicNetwork:
         # Estadísticas
         self.users_trained_count = 0
         
-        logger.info("RealSiameseDynamicNetwork inicializada - 100% SIN SIMULACIÓN")
+        logger.info("RealSiameseDynamicNetwork inicializada")
     
     def _load_real_dynamic_config(self) -> Dict[str, Any]:
-        """Carga configuración REAL de la red siamesa dinámica."""
+        """Carga configuración de la red siamesa dinámica."""
         real_config = {
             'sequence_processing': 'bidirectional_lstm',
             'lstm_units': [128, 64],
@@ -197,18 +199,18 @@ class RealSiameseDynamicNetwork:
             'noise_level': 0.01,
         }
         
-        logger.info("Configuración REAL de red dinámica cargada")
+        logger.info("Configuración de red dinámica cargada")
         return real_config
     
     def _get_real_model_save_path(self) -> Path:
-        """Obtiene ruta para guardar modelos REALES."""
+        """Obtiene ruta para guardar modelos."""
         models_dir = Path(get_config('paths.models', 'biometric_data/models'))
         return models_dir / 'dynamic_model.h5'
     
     def build_real_base_network(self) -> Model:
-        """Construye la red base temporal REAL con BiLSTM."""
+        """Construye la red base temporal con BiLSTM."""
         try:
-            logger.info("Construyendo red base temporal REAL...")
+            logger.info("Construyendo red base temporal...")
             
             # Input layer para secuencias temporales
             input_layer = layers.Input(
@@ -221,7 +223,7 @@ class RealSiameseDynamicNetwork:
             # Masking para secuencias de longitud variable
             if self.config['use_masking']:
                 x = layers.Masking(mask_value=0.0, name='real_sequence_masking')(x)
-                logger.info("  - Masking aplicado")
+                logger.info("  - Masking aplicado para secuencias variables")
             
             # Normalización de secuencias
             if self.config['sequence_normalization'] == 'layer_norm':
@@ -277,6 +279,8 @@ class RealSiameseDynamicNetwork:
             logger.info(f"  - Parámetros totales: {total_params:,}")
             logger.info(f"  - Arquitectura: {self.config['sequence_processing']}")
             logger.info(f"  - LSTM units: {self.config['lstm_units']}")
+            logger.info(f"  - Dropout: {self.config['dropout_rate']}")
+            logger.info(f"  - Pooling: {self.config['temporal_pooling']}")
             
             return base_model
             
@@ -285,15 +289,16 @@ class RealSiameseDynamicNetwork:
             raise
     
     def _build_real_temporal_layers(self, x):
-        """Construye las capas temporales REALES (BiLSTM)."""
+        """Construye las capas temporales (LSTM/BiLSTM)."""
         try:
             lstm_units = self.config['lstm_units']
             processing_type = self.config['sequence_processing']
             
             logger.info(f"=== CONSTRUYENDO CAPAS TEMPORALES ===")
-            logger.info(f"Input shape: {x.shape}")
-            logger.info(f"Processing: {processing_type}")
+            logger.info(f"Input tensor shape: {x.shape}")
+            logger.info(f"Processing type: {processing_type}")
             logger.info(f"LSTM units: {lstm_units}")
+            logger.info(f"Temporal pooling: {self.config['temporal_pooling']}")
             
             for i, units in enumerate(lstm_units):
                 logger.info(f"--- Capa LSTM {i+1}/{len(lstm_units)} ---")
@@ -301,12 +306,12 @@ class RealSiameseDynamicNetwork:
                 # IMPORTANTE: Si usamos pooling personalizado, todas las capas retornan secuencias
                 if self.config['temporal_pooling'] in ['attention', 'last']:
                     return_sequences = True
-                    logger.info(f"Capa {i+1}: return_sequences=True (pooling personalizado)")
+                    logger.info(f"Capa {i+1}: return_sequences=True (pooling personalizado detectado)")
                 else:
                     return_sequences = i < len(lstm_units) - 1
-                    logger.info(f"Capa {i+1}: return_sequences={return_sequences}")
+                    logger.info(f"Capa {i+1}: return_sequences={return_sequences} (pooling estándar)")
                 
-                logger.info(f"Antes de capa {i+1}: shape = {x.shape}")
+                logger.info(f"Antes de construir capa {i+1}: tensor shape = {x.shape}")
                 
                 if processing_type == 'bidirectional_lstm':
                     logger.info(f"Construyendo Bidirectional LSTM con {units} unidades...")
@@ -322,10 +327,12 @@ class RealSiameseDynamicNetwork:
                             ),
                             name=f'real_bidirectional_lstm_{i+1}'
                         )(x)
-                        logger.info(f"✓ BiLSTM {i+1} construido")
-                        logger.info(f"Después de BiLSTM {i+1}: shape = {x.shape}")
+                        logger.info(f"✓ Bidirectional LSTM {i+1} construido exitosamente")
+                        logger.info(f"Después de BiLSTM {i+1}: tensor shape = {x.shape}")
                     except Exception as lstm_error:
                         logger.error(f"ERROR en BiLSTM {i+1}: {lstm_error}")
+                        logger.error(f"Config dropout: {self.config['dropout_rate']}")
+                        logger.error(f"Config recurrent_dropout: {self.config['recurrent_dropout']}")
                         raise
                         
                 elif processing_type == 'lstm':
@@ -339,8 +346,8 @@ class RealSiameseDynamicNetwork:
                             kernel_regularizer=keras.regularizers.l2(0.001),
                             name=f'real_lstm_{i+1}'
                         )(x)
-                        logger.info(f"✓ LSTM {i+1} construido")
-                        logger.info(f"Después de LSTM {i+1}: shape = {x.shape}")
+                        logger.info(f"✓ LSTM {i+1} construido exitosamente")
+                        logger.info(f"Después de LSTM {i+1}: tensor shape = {x.shape}")
                     except Exception as lstm_error:
                         logger.error(f"ERROR en LSTM {i+1}: {lstm_error}")
                         raise
@@ -356,8 +363,8 @@ class RealSiameseDynamicNetwork:
                             kernel_regularizer=keras.regularizers.l2(0.001),
                             name=f'real_gru_{i+1}'
                         )(x)
-                        logger.info(f"✓ GRU {i+1} construido")
-                        logger.info(f"Después de GRU {i+1}: shape = {x.shape}")
+                        logger.info(f"✓ GRU {i+1} construido exitosamente")
+                        logger.info(f"Después de GRU {i+1}: tensor shape = {x.shape}")
                     except Exception as gru_error:
                         logger.error(f"ERROR en GRU {i+1}: {gru_error}")
                         raise
@@ -367,8 +374,8 @@ class RealSiameseDynamicNetwork:
                     logger.info(f"Aplicando LayerNormalization después de capa {i+1}...")
                     try:
                         x = layers.LayerNormalization(name=f'real_layer_norm_{i+1}')(x)
-                        logger.info(f"✓ LayerNormalization {i+1} aplicada")
-                        logger.info(f"Después de LayerNorm {i+1}: shape = {x.shape}")
+                        logger.info(f"✓ LayerNormalization {i+1} aplicada exitosamente")
+                        logger.info(f"Después de LayerNorm {i+1}: tensor shape = {x.shape}")
                     except Exception as norm_error:
                         logger.error(f"ERROR en LayerNormalization {i+1}: {norm_error}")
                         raise
@@ -377,6 +384,8 @@ class RealSiameseDynamicNetwork:
             
             logger.info(f"=== CAPAS TEMPORALES COMPLETADAS ===")
             logger.info(f"Shape final: {x.shape}")
+            logger.info(f"Total capas construidas: {len(lstm_units)}")
+
             
             return x
             
@@ -388,12 +397,14 @@ class RealSiameseDynamicNetwork:
             raise
     
     def _build_real_temporal_pooling(self, x):
-        """Construye el pooling temporal REAL con attention mechanism."""
+        """Construye el pooling temporal con attention mechanism."""
         try:
             pooling_type = self.config['temporal_pooling']
             logger.info(f"=== CONSTRUYENDO POOLING TEMPORAL ===")
-            logger.info(f"Input shape: {x.shape}")
+            logger.info(f"Input tensor shape: {x.shape}")
             logger.info(f"Pooling type: {pooling_type}")
+            logger.info(f"self.sequence_length: {self.sequence_length}")
+
             
             if pooling_type == 'attention':
                 logger.info("--- CONSTRUYENDO ATTENTION MECHANISM ---")
@@ -406,6 +417,8 @@ class RealSiameseDynamicNetwork:
                     
                     # 2. Expandir contexto
                     logger.info("Paso 2: Expandiendo context...")
+                    logger.info(f"Usando self.sequence_length = {self.sequence_length}")
+
                     global_context_expanded = layers.RepeatVector(
                         self.sequence_length, 
                         name='real_context_expanded'
@@ -414,11 +427,13 @@ class RealSiameseDynamicNetwork:
                     
                     # 3. Concatenar
                     logger.info("Paso 3: Concatenando...")
+                    logger.info(f"Shapes para concatenar: x={x.shape}, context_expanded={global_context_expanded.shape}")
+
                     combined = layers.Concatenate(
                         axis=-1, 
                         name='real_combined_features'
                     )([x, global_context_expanded])
-                    logger.info(f"Combined shape: {combined.shape}")
+                    logger.info(f"Combined features shape: {combined.shape}")
                     
                     # 4. Attention scores
                     logger.info("Paso 4: Attention scores...")
@@ -428,9 +443,12 @@ class RealSiameseDynamicNetwork:
                         name='real_attention_scores'
                     )(combined)
                     logger.info(f"Attention scores shape: {attention_scores.shape}")
+                    logger.info(f"Dense output dtype: {attention_scores.dtype}")
                     
                     # 5. Normalizar con softmax
-                    logger.info("Paso 5: Softmax...")
+                    logger.info("Paso 5: Normalizado con softmax...")
+                    logger.info(f"ANTES del Softmax - attention_scores shape: {attention_scores.shape}")
+
                     attention_scores_squeezed = layers.Lambda(
                         lambda x: tf.squeeze(x, axis=-1),
                         name='real_attention_squeeze'
@@ -487,6 +505,7 @@ class RealSiameseDynamicNetwork:
             else:
                 logger.warning(f"Pooling desconocido: {pooling_type}, usando average")
                 x = layers.GlobalAveragePooling1D(name='real_default_pooling')(x)
+                logger.info(f"Default pooling shape: {x.shape}")
             
             logger.info(f"=== POOLING COMPLETADO ===")
             logger.info(f"Output shape: {x.shape}")
@@ -509,12 +528,12 @@ class RealSiameseDynamicNetwork:
                 raise
     
     def build_real_siamese_model(self) -> Model:
-        """Construye el modelo siamés temporal REAL completo."""
+        """Construye el modelo siamés temporal completo."""
         try:
             if self.base_network is None:
                 self.build_real_base_network()
             
-            logger.info("Construyendo modelo siamés temporal REAL...")
+            logger.info("Construyendo modelo siamés temporal...")
             
             # Inputs para las dos ramas
             input_a = layers.Input(
@@ -560,7 +579,9 @@ class RealSiameseDynamicNetwork:
             
             total_params = siamese_model.count_params()
             logger.info(f"Modelo siamés temporal construido: {total_params:,} parámetros")
-            logger.info(f"  - Métrica: {self.config['distance_metric']}")
+            logger.info(f"  - Métrica de distancia: {self.config['distance_metric']}")
+            logger.info(f"  - Arquitectura: Twin network con pesos compartidos")
+            logger.info(f"  - Base network: {self.base_network.count_params():,} parámetros")
             
             return siamese_model
             
@@ -569,12 +590,12 @@ class RealSiameseDynamicNetwork:
             raise
     
     def compile_real_model(self):
-        """Compila el modelo siamés temporal REAL."""
+        """Compila el modelo siamés temporal."""
         try:
             if self.siamese_model is None:
                 self.build_real_siamese_model()
             
-            logger.info("Compilando modelo siamés temporal REAL...")
+            logger.info("Compilando modelo siamés temporal...")
             
             optimizer = optimizers.Adam(
                 learning_rate=5e-4,
@@ -599,14 +620,14 @@ class RealSiameseDynamicNetwork:
             
             logger.info(f"Modelo compilado:")
             logger.info(f"  - Optimizador: Adam (lr={self.config['learning_rate']})")
-            logger.info(f"  - Pérdida: {self.config['loss_function']}")
+            logger.info(f"  - Funcion de pérdida: {self.config['loss_function']}")
             
         except Exception as e:
-            logger.error(f"Error compilando modelo: {e}")
+            logger.error(f"Error compilando modelo temporal: {e}")
             raise
     
     def _contrastive_loss_real(self, y_true, y_pred):
-        """Función de pérdida contrastiva REAL."""
+        """Función de pérdida contrastiva."""
         epsilon = 1e-8
         margin = tf.constant(self.config.get('margin', 1.0), dtype=tf.float32)
         
@@ -618,7 +639,7 @@ class RealSiameseDynamicNetwork:
         return tf.reduce_mean(y_true * square_pred + (1 - y_true) * margin_square)
     
     def _far_metric_real(self, y_true, y_pred):
-        """Métrica FAR REAL con threshold dinámico."""
+        """Métrica FAR (False Accept Rate) con threshold dinámico."""
         y_pred_flat = tf.reshape(y_pred, [-1])
         y_true_flat = tf.reshape(y_true, [-1])
         
@@ -637,7 +658,7 @@ class RealSiameseDynamicNetwork:
         )
     
     def _frr_metric_real(self, y_true, y_pred):
-        """Métrica FRR REAL con threshold dinámico."""
+        """Métrica FRR (False Reject Rate) con threshold dinámico."""
         y_pred_flat = tf.reshape(y_pred, [-1])
         y_true_flat = tf.reshape(y_true, [-1])
         
@@ -655,108 +676,20 @@ class RealSiameseDynamicNetwork:
             lambda: 0.0
         )
     
-    def _pad_or_truncate_sequence(self, sequence: np.ndarray) -> np.ndarray:
-        """Ajusta la secuencia a la longitud fija requerida."""
-        current_length = sequence.shape[0]
-        
-        if current_length >= self.sequence_length:
-            return sequence[:self.sequence_length]
-        else:
-            padding = np.zeros((self.sequence_length - current_length, self.feature_dim))
-            return np.vstack([sequence, padding])
-    
-    def _setup_real_training_callbacks(self) -> List[callbacks.Callback]:
-        """Configura callbacks para entrenamiento REAL."""
-        callbacks_list = []
-        
-        logger.info(f"=== CONFIGURANDO CALLBACKS ===")
-        
-        # Early stopping
-        early_stopping = callbacks.EarlyStopping(
-            monitor='val_loss',
-            patience=self.config['early_stopping_patience'],
-            restore_best_weights=True,
-            verbose=1
-        )
-        callbacks_list.append(early_stopping)
-        logger.info(f"✓ Early stopping: patience={self.config['early_stopping_patience']}")
-        
-        # Reduce learning rate
-        reduce_lr = callbacks.ReduceLROnPlateau(
-            monitor='val_loss',
-            factor=0.5,
-            patience=self.config['reduce_lr_patience'],
-            min_lr=self.config['min_lr'],
-            verbose=1
-        )
-        callbacks_list.append(reduce_lr)
-        logger.info(f"✓ ReduceLR: patience={self.config['reduce_lr_patience']}")
-        
-        # Model checkpoint
-        checkpoint = callbacks.ModelCheckpoint(
-            filepath=str(self.model_save_path),
-            monitor='val_loss',
-            save_best_only=True,
-            verbose=1
-        )
-        callbacks_list.append(checkpoint)
-        logger.info(f"✓ Checkpoint: {self.model_save_path}")
-        
-        # Monitor de LR
-        class LRMonitor(callbacks.Callback):
-            def on_epoch_end(self, epoch, logs=None):
-                if logs is None:
-                    logs = {}
-                
-                current_lr = float(self.model.optimizer.learning_rate)
-                train_loss = logs.get('loss', 0)
-                val_loss = logs.get('val_loss', 0)
-                
-                logger.info(f"Época {epoch+1}:")
-                logger.info(f"  ┣━ LR: {current_lr:.2e}")
-                logger.info(f"  ┣━ Train Loss: {train_loss:.6f}")
-                logger.info(f"  ┗━ Val Loss: {val_loss:.6f}")
-        
-        callbacks_list.append(LRMonitor())
-        logger.info(f"✓ LR Monitor configurado")
-        
-        # Monitor anti-NaN
-        class NaNStoppingCallback(callbacks.Callback):
-            def on_batch_end(self, batch, logs=None):
-                if logs:
-                    current_loss = logs.get('loss', 0)
-                    if tf.math.is_nan(current_loss) or tf.math.is_inf(current_loss):
-                        logger.error(f"NaN/Inf en batch {batch}")
-                        self.model.stop_training = True
-            
-            def on_epoch_end(self, epoch, logs=None):
-                if logs:
-                    val_loss = logs.get('val_loss', 0)
-                    if tf.math.is_nan(val_loss) or tf.math.is_inf(val_loss):
-                        logger.error(f"NaN/Inf en época {epoch}")
-                        self.model.stop_training = True
-        
-        callbacks_list.append(NaNStoppingCallback())
-        logger.info(f"✓ Anti-NaN configurado")
-        
-        logger.info(f"=== TOTAL CALLBACKS: {len(callbacks_list)} ===")
-        
-        return callbacks_list
-    
     def load_real_temporal_data_from_database(self, database) -> bool:
         """
-        Carga datos temporales REALES desde la base de datos biométrica.
-        VERSIÓN FINAL - Maneja usuarios Bootstrap y Normales correctamente.
+        Carga datos temporales desde la base de datos biométrica.
+        Maneja usuarios Bootstrap y Normales.
         """
         try:
-            logger.info("=== CARGANDO DATOS TEMPORALES REALES ===")
-            logger.info("🔄 Buscando templates con datos temporales...")
+            logger.info("=== CARGANDO DATOS TEMPORALES===")
+            logger.info("🔄 Buscando templates con datos temporales para red dinámica...")
             
             # Obtener usuarios
             real_users = database.list_users()
             
             if len(real_users) < self.config.get('min_users_for_training', 2):
-                logger.error(f"Insuficientes usuarios: {len(real_users)} < 2")
+                logger.error(f"Insuficientes usuarios: {len(real_users)} < {self.config.get('min_users_for_training', 2)}")
                 return False
             
             logger.info(f"📊 Usuarios encontrados: {len(real_users)}")
@@ -769,7 +702,7 @@ class RealSiameseDynamicNetwork:
             
             for user in real_users:
                 try:
-                    logger.info(f"📂 Procesando: {user.username} ({user.user_id})")
+                    logger.info(f"📂 Procesando usuario: {user.username} ({user.user_id})")
                     
                     # Obtener templates
                     user_templates_list = []
@@ -778,10 +711,10 @@ class RealSiameseDynamicNetwork:
                             user_templates_list.append(template)
                     
                     if not user_templates_list:
-                        logger.info(f"   ⚠️ Sin templates")
+                        logger.info(f"  ⚠️ Usuario {user.user_id} sin templates, omitiendo")
                         continue
                     
-                    logger.info(f"   📊 Templates: {len(user_templates_list)}")
+                    logger.info(f"   📊 Templates encontrados: {len(user_templates_list)}")
                     
                     # Filtrar templates con datos temporales
                     temporal_templates = []
@@ -797,7 +730,7 @@ class RealSiameseDynamicNetwork:
                         if 'dynamic' in template_type_str or has_temporal_sequence or has_individual_sequences:
                             temporal_templates.append(template)
                     
-                    logger.info(f"   📊 Templates temporales: {len(temporal_templates)}")
+                    logger.info(f"   📊 Templates con datos temporales: {len(temporal_templates)}")
                     
                     # Procesar templates temporales
                     user_temporal_samples = []
@@ -811,11 +744,15 @@ class RealSiameseDynamicNetwork:
                             has_temporal_sequence = temporal_sequence and len(temporal_sequence) >= 5
                             
                             if has_temporal_sequence or has_individual_data:
-                                logger.info(f"   🔧 Procesando: {template.gesture_name}")
+                                logger.info(f"   🔧 Procesando template: {template.gesture_name}")
+                                logger.info(f"       Tipo: {template.template_type}")
+
                                 
                                 # PROCESAR SECUENCIAS INDIVIDUALES (USUARIOS NORMALES)
                                 if has_individual_data:
                                     logger.info(f"       🎯 {len(individual_sequences)} secuencias individuales")
+                                elif has_temporal_sequence:
+                                    logger.info(f"       Secuencia: {len(temporal_sequence)} frames")
                                     
                                     sequences_loaded = 0
                                     for seq_idx, sequence in enumerate(individual_sequences):
@@ -838,6 +775,7 @@ class RealSiameseDynamicNetwork:
                                                         'sequence_length': len(sequence_array),
                                                         'feature_dim': sequence_array.shape[1],
                                                         'user_type': 'Normal_Preserved',
+                                                        'original_samples_used': len(individual_sequences),
                                                         'sequence_index': seq_idx,
                                                         'confidence': template.confidence,
                                                         'gesture_name': template.gesture_name,
@@ -849,14 +787,17 @@ class RealSiameseDynamicNetwork:
                                     
                                     genuine_pairs = sequences_loaded * (sequences_loaded - 1) // 2 if sequences_loaded >= 2 else 0
                                     
-                                    logger.info(f"       ✅ Secuencias: {sequences_loaded}")
-                                    logger.info(f"       📊 Pares genuinos: {genuine_pairs}")
+                                    logger.info(f"       ✅ Secuencias preservadas cargadas: {sequences_loaded}")
+                                    logger.info(f"       📊 Pares genuinos generados: {genuine_pairs}")
+                                    logger.info(f"       🎯 Usuario incluido en entrenamiento dinámico")
                                 
                                 # PROCESAR SECUENCIA TEMPORAL (BOOTSTRAP)
                                 elif has_temporal_sequence:
                                     temporal_array = np.array(temporal_sequence, dtype=np.float32)
                                     
                                     if len(temporal_array.shape) == 2 and temporal_array.shape[1] == self.feature_dim:
+                                        samples_used = template.metadata.get('samples_used', 1)
+                                        
                                         dynamic_sample = RealDynamicSample(
                                             user_id=user.user_id,
                                             sequence_id=template.template_id,
@@ -879,9 +820,9 @@ class RealSiameseDynamicNetwork:
                                         user_temporal_samples.append(dynamic_sample)
                                         logger.info(f"       ✅ Bootstrap: {len(temporal_sequence)} frames")
                                     else:
-                                        logger.warning(f"   ⚠️ Dimensiones incorrectas: {temporal_array.shape}")
+                                        logger.warning(f"   ⚠️ Dimensiones incorrectas: {temporal_array.shape} (esperado: [N, {self.feature_dim}])")
                             else:
-                                logger.warning(f"   ⚠️ Sin datos temporales válidos")
+                                logger.warning(f"   ⚠️ Template sin datos temporales válidos")
                         
                         except Exception as e:
                             logger.error(f"   ❌ Error procesando template: {e}")
@@ -901,12 +842,12 @@ class RealSiameseDynamicNetwork:
                             gesture_counts[gesture_name] = gesture_counts.get(gesture_name, 0) + 1
                         
                         logger.info(f"✅ Usuario temporal válido: {user.username}")
-                        logger.info(f"   📊 Secuencias: {len(user_temporal_samples)}")
-                        logger.info(f"   🎯 Gestos: {len(gesture_counts)}")
+                        logger.info(f"   📊 Secuencias temporales cargadas: {len(user_temporal_samples)}")
+                        logger.info(f"   🎯 Gestos únicos: {len(gesture_counts)}")
                         for gesture, count in gesture_counts.items():
-                            logger.info(f"      • {gesture}: {count}")
+                            logger.info(f"      • {gesture}: {count} secuencias temporales")
                     else:
-                        logger.warning(f"   ⚠️ Pocas secuencias: {len(user_temporal_samples)}")
+                        logger.warning(f"   ⚠️ Usuario {user.user_id} con pocas secuencias temporales: {len(user_temporal_samples)} < {min_temporal_samples}")
                     
                 except Exception as e:
                     logger.error(f"Error procesando usuario {user.user_id}: {e}")
@@ -929,7 +870,7 @@ class RealSiameseDynamicNetwork:
                 logger.error("=" * 60)
                 logger.error("❌ MUESTRAS INSUFICIENTES")
                 logger.error("=" * 60)
-                logger.error(f"Cargadas: {total_samples_loaded} < {min_total_samples}")
+                logger.error(f"Muestras cargadas: {total_samples_loaded} < {min_total_samples}")
                 return False
             
             # División train/validation
@@ -949,10 +890,18 @@ class RealSiameseDynamicNetwork:
                 logger.info(f"División estratificada: Train {len(train_samples)}, Val {len(val_samples)}")
                 
             except Exception as e:
-                logger.warning(f"División simple: {e}")
+                logger.warning(f"División simple aplicada: {e}")
                 split_idx = int(0.8 * len(self.real_training_samples))
                 self.real_validation_samples = self.real_training_samples[split_idx:]
                 self.real_training_samples = self.real_training_samples[:split_idx]
+            
+            logger.info("=" * 60)
+            logger.info("✅ DATOS TEMPORALES REALES CARGADOS EXITOSAMENTE")
+            logger.info("=" * 60)
+            logger.info(f"👥 Usuarios con datos temporales suficientes: {users_with_sufficient_data}")
+            logger.info(f"🧬 Total secuencias temporales REALES cargadas: {total_samples_loaded}")
+            logger.info(f"📊 Promedio secuencias por usuario: {total_samples_loaded/users_with_sufficient_data:.1f}")
+            logger.info(f"📐 Dimensiones por frame: {self.feature_dim}")
             
             # Actualizar contador
             all_samples = self.real_training_samples + self.real_validation_samples
@@ -960,6 +909,11 @@ class RealSiameseDynamicNetwork:
             for sample in all_samples:
                 user_stats[sample.user_id] = user_stats.get(sample.user_id, 0) + 1
             
+            logger.info(f"📈 DISTRIBUCIÓN POR USUARIO:")
+            for user_id, count in user_stats.items():
+                user_name = next((u.username for u in real_users if u.user_id == user_id), user_id)
+                log_info(f"   • {user_name} ({user_id}): {count} secuencias")
+                
             self.users_trained_count = len(user_stats)
             
             # Reporte final
@@ -970,10 +924,6 @@ class RealSiameseDynamicNetwork:
             logger.info(f"🧬 Total secuencias: {total_samples_loaded}")
             logger.info(f"📊 Promedio/usuario: {total_samples_loaded/users_with_sufficient_data:.1f}")
             logger.info(f"📐 Dimensiones: {self.feature_dim}")
-            logger.info(f"📈 DISTRIBUCIÓN:")
-            for user_id, count in user_stats.items():
-                user_name = next((u.username for u in real_users if u.user_id == user_id), user_id)
-                logger.info(f"   • {user_name}: {count}")
             logger.info(f"📊 Usuarios registrados: {self.users_trained_count}")
             logger.info("=" * 60)
             
@@ -990,7 +940,7 @@ class RealSiameseDynamicNetwork:
             return False
         
     def validate_real_temporal_data_quality(self) -> bool:
-        """Valida la calidad de los datos temporales REALES."""
+        """Valida la calidad de los datos temporales."""
         try:
             logger.info("Validando calidad de datos temporales...")
             
@@ -1013,7 +963,7 @@ class RealSiameseDynamicNetwork:
             # Validar dimensiones
             for i, sample in enumerate(self.real_training_samples[:10]):
                 if sample.temporal_features.shape[1] != self.feature_dim:
-                    logger.error(f"Dimensión incorrecta en muestra {i}")
+                    logger.error(f"Dimensión incorrecta en muestra {i}: esperado {self.feature_dim}, obtenido {sample.temporal_features.shape[1]}")
                     return False
             
             # Validar longitudes
@@ -1022,10 +972,10 @@ class RealSiameseDynamicNetwork:
             max_length = max(sequence_lengths)
             avg_length = sum(sequence_lengths) / len(sequence_lengths)
             
-            logger.info(f"Longitudes - Min: {min_length}, Max: {max_length}, Avg: {avg_length:.1f}")
+            logger.info(f"Longitudes de secuencia - Min: {min_length}, Max: {max_length}, Avg: {avg_length:.1f}")
             
             if min_length < 5:
-                logger.error(f"Secuencia muy corta: {min_length} < 5")
+                logger.error(f"Secuencia muy corta: {min_length} frames < 5 mínimo")
                 return False
             
             # Validar usuarios
@@ -1047,15 +997,16 @@ class RealSiameseDynamicNetwork:
             return False
     
     def create_real_temporal_pairs(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Crea pares de secuencias temporales REALES."""
+        """Crea pares de secuencias temporales."""
         try:
-            logger.info("Creando pares temporales REALES...")
+            logger.info("Creando pares temporales...")
             
             pairs_a = []
             pairs_b = []
             labels = []
             
             samples = self.real_training_samples
+            n_samples = len(samples)
             
             # Crear pares genuinos
             user_samples = {}
@@ -1080,11 +1031,11 @@ class RealSiameseDynamicNetwork:
                             labels.append(1)
                             genuine_pairs += 1
             
-            logger.info(f"Pares genuinos: {genuine_pairs}")
+            logger.info(f"Pares genuinos creados: {genuine_pairs}")
             
             # Crear pares impostores
             impostor_pairs = 0
-            target_impostor_pairs = genuine_pairs
+            target_impostor_pairs = genuine_pairs #Balancear clases
             
             users_list = list(user_samples.keys())
             while impostor_pairs < target_impostor_pairs:
@@ -1106,7 +1057,7 @@ class RealSiameseDynamicNetwork:
                     labels.append(0)
                     impostor_pairs += 1
             
-            logger.info(f"Pares impostores: {impostor_pairs}")
+            logger.info(f"Pares impostores creados: {impostor_pairs}")
             
             # Convertir a arrays
             pairs_a = np.array(pairs_a, dtype=np.float32)
@@ -1130,19 +1081,29 @@ class RealSiameseDynamicNetwork:
             logger.error(f"Error creando pares: {e}")
             raise
     
+    def _pad_or_truncate_sequence(self, sequence: np.ndarray) -> np.ndarray:
+        """Ajusta la secuencia a la longitud fija requerida."""
+        current_length = sequence.shape[0]
+        
+        if current_length >= self.sequence_length:
+            return sequence[:self.sequence_length]
+        else:
+            padding = np.zeros((self.sequence_length - current_length, self.feature_dim))
+            return np.vstack([sequence, padding])
+        
     def train_with_real_data(self, database, validation_split: float = 0.2) -> RealTemporalTrainingHistory:
-        """Entrena el modelo con datos temporales REALES."""
+        """Entrena el modelo con datos temporales."""
         try:
             start_time = time.time()
-            logger.info("=== INICIANDO ENTRENAMIENTO TEMPORAL ===")
+            logger.info("=== INICIANDO ENTRENAMIENTO TEMPORA ===")
             
             # 1. Cargar datos
             if not self.load_real_temporal_data_from_database(database):
-                raise ValueError("No se pudieron cargar datos temporales REALES")
+                raise ValueError("No se pudieron cargar datos temporales suficientes")
             
             # 2. Validar calidad
             if not self.validate_real_temporal_data_quality():
-                raise ValueError("Datos no cumplen criterios de calidad")
+                raise ValueError("Datos temporales no cumplen criterios de calidad")
             
             # 3. Compilar modelo
             if not self.is_compiled:
@@ -1154,16 +1115,7 @@ class RealSiameseDynamicNetwork:
             # 5. Callbacks
             callbacks_list = self._setup_real_training_callbacks()
             
-            # 6. Logs pre-entrenamiento
-            logger.info(f"=== CONFIGURACIÓN PRE-ENTRENAMIENTO ===")
-            logger.info(f"Learning rate: {self.siamese_model.optimizer.learning_rate.numpy()}")
-            logger.info(f"Margen: {self.config.get('margin', 'NO DEFINIDO')}")
-            logger.info(f"Batch size: {self.config['batch_size']}")
-            logger.info(f"Total parámetros: {self.siamese_model.count_params()}")
-            logger.info(f"Pares: {len(labels)}")
-            logger.info(f"Shape: {pairs_a.shape}, {pairs_b.shape}")
-            
-            # 7. Entrenar
+            # 6. Entrenar
             logger.info("Iniciando entrenamiento temporal...")
             history = self.siamese_model.fit(
                 [pairs_a, pairs_b],
@@ -1175,27 +1127,39 @@ class RealSiameseDynamicNetwork:
                 verbose=1
             )
             
-            # 8. Actualizar estado
+            # 7. Actualizar estado
             self.is_trained = True
             self.training_history.loss = history.history['loss']
             self.training_history.val_loss = history.history['val_loss']
             
-            # 9. Evaluar
+            # 8. Evaluar
             metrics = self.evaluate_real_model(pairs_a, pairs_b, labels)
             self.current_metrics = metrics
             
-            # 10. Guardar
+            # 9. Guardar modelo entrenado
             self.save_real_model()
             
             total_time = time.time() - start_time
             self.training_history.total_training_time = total_time
             
-            logger.info("=== ENTRENAMIENTO COMPLETADO ===")
-            logger.info(f"  - Tiempo: {total_time:.1f}s")
-            logger.info(f"  - Épocas: {len(history.history['loss'])}")
+            # 6. Logs pre-entrenamiento
+            logger.info(f"=== CONFIGURACIÓN PRE-ENTRENAMIENTO ===")
+            logger.info(f"Learning rate: {self.siamese_model.optimizer.learning_rate.numpy()}")
+            logger.info(f"Margen contrastive loss: {self.config.get('margin', 'NO DEFINIDO')}")
+            logger.info(f"Batch size: {self.config['batch_size']}")
+            logger.info(f"Total parámetros: {self.siamese_model.count_params()}")
+            logger.info(f"Pares entrenamiento: {len(labels)}")
+            logger.info(f"Shape: {pairs_a.shape}, {pairs_b.shape}")
+            
+            logger.info("Iniciando entrenamiento temporal REAL...")
+            logger.info(f"✓ Entrenamiento temporal REAL completado en {total_time:.1f}s")
+            logger.info(f"  - Épocas entrenadas: {len(history.history['loss'])}")
             logger.info(f"  - Mejor pérdida: {min(history.history['val_loss']):.4f}")
-            logger.info(f"  - EER: {metrics.eer:.3f}")
-            logger.info(f"  - AUC: {metrics.auc_score:.3f}")
+            logger.info(f"  - EER final: {metrics.eer:.3f}")
+            logger.info(f"  - AUC final: {metrics.auc_score:.3f}")
+            
+            # Marcar como entrenado
+            self.is_trained = True
             logger.info("✓ Red dinámica marcada como entrenada")
             
             return self.training_history
@@ -1203,12 +1167,239 @@ class RealSiameseDynamicNetwork:
         except Exception as e:
             logger.error(f"Error en entrenamiento: {e}")
             raise
+    
+    def _setup_real_training_callbacks(self) -> List[callbacks.Callback]:
+        """Configura callbacks para entrenamiento REAL."""
+        callbacks_list = []
         
+        # LOG: Configuración inicial
+        logger.info(f"=== CONFIGURANDO CALLBACKS DE ENTRENAMIENTO ===")
+        logger.info(f"Early stopping patience: {self.config['early_stopping_patience']}")
+        logger.info(f"Reduce LR patience: {self.config['reduce_lr_patience']}")
+        logger.info(f"Min LR: {self.config['min_lr']}")
+        
+        # Early stopping
+        early_stopping = callbacks.EarlyStopping(
+            monitor='val_loss',
+            patience=self.config['early_stopping_patience'],
+            restore_best_weights=True,
+            verbose=1
+        )
+        callbacks_list.append(early_stopping)
+        logger.info(f"✓ Early stopping configurado: patience={self.config['early_stopping_patience']}")
+        
+        # Reduce learning rate
+        reduce_lr = callbacks.ReduceLROnPlateau(
+            monitor='val_loss',
+            factor=0.5,
+            patience=self.config['reduce_lr_patience'],
+            min_lr=self.config['min_lr'],
+            verbose=1
+        )
+        callbacks_list.append(reduce_lr)
+        logger.info(f"✓ ReduceLROnPlateau configurado: patience={self.config['reduce_lr_patience']}, factor=0.5")
+        
+        # Model checkpoint
+        checkpoint = callbacks.ModelCheckpoint(
+            filepath=str(self.model_save_path),
+            monitor='val_loss',
+            save_best_only=True,
+            verbose=1
+        )
+        callbacks_list.append(checkpoint)
+        logger.info(f"✓ ModelCheckpoint configurado: {self.model_save_path}")
+        
+        # CALLBACK CRÍTICO: Monitor de Learning Rate y métricas
+        class LRAndMetricsMonitor(callbacks.Callback):
+            def on_epoch_end(self, epoch, logs=None):
+                if logs is None:
+                    logs = {}
+                
+                current_lr = float(self.model.optimizer.learning_rate)
+                train_loss = logs.get('loss', 0)
+                val_loss = logs.get('val_loss', 0)
+                
+                logger.info(f"MONITOR ÉPOCA {epoch+1}:")
+                logger.info(f"  ┣━ Learning Rate: {current_lr:.2e}")
+                logger.info(f"  ┣━ Train Loss: {train_loss:.6f}")
+                logger.info(f"  ┗━ Val Loss: {val_loss:.6f}")
+                
+                # ALERTA si hay cambio súbito
+                if hasattr(self, 'prev_val_loss') and self.prev_val_loss is not None:
+                    loss_change = abs(val_loss - self.prev_val_loss)
+                    if loss_change > 0.1:
+                        logger.info(f"  🚨 ALERTA: Cambio súbito val_loss = {loss_change:.6f}")
+                
+                self.prev_val_loss = val_loss
+                
+            def on_train_begin(self, logs=None):
+                initial_lr = float(self.model.optimizer.learning_rate)
+                logger.info(f"🚀 INICIO ENTRENAMIENTO: LR inicial = {initial_lr:.2e}")
+                self.prev_val_loss = None
+        
+        callbacks_list.append(LRAndMetricsMonitor())
+        logger.info(f"✓ Monitor de LR configurado")
+        
+        # Monitor de gradientes para detectar explosión
+        class GradientMonitor(callbacks.Callback):
+            def on_epoch_begin(self, epoch, logs=None):
+                # Solo monitorear después de época 15 (cerca del colapso)
+                if epoch >= 15:
+                    logger.info(f"🔍 MONITORING GRADIENTES - Época {epoch+1}")
+            
+            def on_epoch_end(self, epoch, logs=None):
+                if epoch >= 15 and logs is not None:  # Solo épocas críticas
+                    try:
+                        # Obtener pesos del modelo
+                        weights = self.model.get_weights()
+                        weight_norms = [np.linalg.norm(w) for w in weights if w.size > 0]
+                        max_weight_norm = max(weight_norms) if weight_norms else 0.0
+                        
+                        current_lr = float(self.model.optimizer.learning_rate)
+                        train_loss = logs.get('loss', 0)
+                        
+                        logger.info(f"GRADIENTES ÉPOCA {epoch+1}:")
+                        logger.info(f"  ┣━ Max Weight Norm: {max_weight_norm:.6f}")
+                        logger.info(f"  ┣━ LR × Loss: {current_lr * train_loss:.8f}")
+                        logger.info(f"  ┗━ Estabilidad: {'🟢 OK' if max_weight_norm < 50.0 else '🔴 INESTABLE'}")
+                        
+                        if max_weight_norm > 100.0:
+                            logger.info(f"🚨 PESOS EXPLOSIVOS DETECTADOS: {max_weight_norm:.6f}")
+                            
+                    except Exception as e:
+                        logger.info(f"Error monitoreando gradientes: {e}")
+        
+        callbacks_list.append(GradientMonitor())
+        logger.info(f"✓ Monitor de gradientes configurado")
+        
+        # NUEVO: Monitor de estabilidad de gradientes (solo logging)
+        class GradientStabilityMonitor(callbacks.Callback):
+            def on_train_begin(self, logs=None):
+                self.prev_loss = None
+                
+            def on_batch_end(self, batch, logs=None):
+                if logs and self.prev_loss is not None:
+                    current_loss = logs.get('loss', 0)
+                    if current_loss > self.prev_loss * 3.0:  # Spike 3x o más
+                        logger.warning(f"Batch {batch}: Loss spike detected - Gradient clipping should handle this")
+                        logger.info(f"Loss: {self.prev_loss:.6f} → {current_loss:.6f}")
+                        logger.info(f"Ratio: {current_loss/self.prev_loss:.2f}x")
+                self.prev_loss = logs.get('loss', 0) if logs else 0
+        
+        callbacks_list.append(GradientStabilityMonitor())
+        logger.info(f"✓ Monitor de estabilidad de gradientes configurado")
+        
+        # Monitor detallado de colapso por batch
+        class DetailedCollapseMonitor(callbacks.Callback):
+            def on_train_begin(self, logs=None):
+                self.epoch = 0
+                self.prev_batch_loss = None
+                self.stable_batches = 0
+                self.total_batches = 0
+                
+            def on_epoch_begin(self, epoch, logs=None):
+                self.epoch = epoch
+                self.prev_batch_loss = None
+                self.batch_losses = []
+                if epoch >= 20:
+                    logger.info(f"🔍 MONITOREANDO COLAPSO ÉPOCA {epoch+1} - Análisis por batch")
+            
+            def on_batch_end(self, batch, logs=None):
+                self.total_batches += 1
+                
+                if self.epoch >= 20:  # Solo monitorear épocas críticas
+                    if logs is None:
+                        logs = {}
+                        
+                    current_loss = logs.get('loss', 0)
+                    current_lr = float(self.model.optimizer.learning_rate)
+                    self.batch_losses.append(current_loss)
+                    
+                    # Log cada 10 batches o si hay cambio súbito
+                    if batch % 10 == 0 or (self.prev_batch_loss and current_loss > self.prev_batch_loss * 3.0):
+                        logger.info(f"Época {self.epoch+1}, Batch {batch}: loss={current_loss:.6f}, lr={current_lr:.2e}")
+                    
+                    # Detectar salto súbito entre batches
+                    if self.prev_batch_loss is not None:
+                        loss_ratio = current_loss / self.prev_batch_loss if self.prev_batch_loss > 0 else 1.0
+                        
+                        if loss_ratio > 5.0:  # Loss se multiplica por 5+
+                            logger.error(f"🚨 COLAPSO SÚBITO DETECTADO:")
+                            logger.error(f"   Época {self.epoch+1}, Batch {batch}")
+                            logger.error(f"   Loss salto: {self.prev_batch_loss:.6f} → {current_loss:.6f}")
+                            logger.error(f"   Ratio: {loss_ratio:.2f}x")
+                            logger.error(f"   Learning Rate: {current_lr:.2e}")
+                            
+                            # Información del contexto
+                            if len(self.batch_losses) > 5:
+                                recent_losses = self.batch_losses[-5:]
+                                logger.error(f"   Últimos 5 losses: {[f'{l:.6f}' for l in recent_losses]}")
+                    
+                    self.prev_batch_loss = current_loss
+            
+            def on_epoch_end(self, epoch, logs=None):
+                if epoch >= 20 and self.batch_losses:
+                    # Estadísticas de la época
+                    min_loss = min(self.batch_losses)
+                    max_loss = max(self.batch_losses)
+                    avg_loss = sum(self.batch_losses) / len(self.batch_losses)
+                    
+                    logger.info(f"ESTADÍSTICAS ÉPOCA {epoch+1}:")
+                    logger.info(f"  ┣━ Loss mínimo: {min_loss:.6f}")
+                    logger.info(f"  ┣━ Loss máximo: {max_loss:.6f}")
+                    logger.info(f"  ┣━ Loss promedio: {avg_loss:.6f}")
+                    logger.info(f"  ┗━ Variabilidad: {max_loss/min_loss:.2f}x")
+        
+        callbacks_list.append(DetailedCollapseMonitor())
+        logger.info(f"✓ Monitor de colapso por batch configurado")
+        
+        # Monitor de métricas de validación por epoch
+        class ValidationMonitor(callbacks.Callback):
+            def on_epoch_end(self, epoch, logs=None):
+                if epoch >= 20 and logs is not None:
+                    val_far = logs.get('val__far_metric_real', 0)
+                    val_frr = logs.get('val__frr_metric_real', 0)
+                    train_far = logs.get('_far_metric_real', 0)
+                    train_frr = logs.get('_frr_metric_real', 0)
+                    
+                    logger.info(f"MÉTRICAS DETALLADAS ÉPOCA {epoch+1}:")
+                    logger.info(f"  ┣━ Train FAR: {train_far:.6f}, FRR: {train_frr:.6f}")
+                    logger.info(f"  ┗━ Val FAR: {val_far:.6f}, FRR: {val_frr:.6f}")
+        
+        callbacks_list.append(ValidationMonitor())
+        logger.info(f"✓ Monitor de métricas de validación configurado")
+        
+        # Monitor anti-NaN
+        class NaNStoppingCallback(callbacks.Callback):
+            def on_batch_end(self, batch, logs=None):
+                if logs:
+                    import tensorflow as tf
+                    current_loss = logs.get('loss', 0)
+                    if tf.math.is_nan(current_loss) or tf.math.is_inf(current_loss):
+                        logger.error(f"NaN/Inf detectado en batch {batch} - Deteniendo entrenamiento")
+                        self.model.stop_training = True
+            
+            def on_epoch_end(self, epoch, logs=None):
+                if logs:
+                    import tensorflow as tf
+                    val_loss = logs.get('val_loss', 0)
+                    if tf.math.is_nan(val_loss) or tf.math.is_inf(val_loss):
+                        logger.error(f"NaN/Inf en validación época {epoch} - Deteniendo entrenamiento")
+                        self.model.stop_training = True
+        
+        callbacks_list.append(NaNStoppingCallback())
+        logger.info(f"✓ Monitor anti-NaN configurado")
+        
+        logger.info(f"=== TOTAL CALLBACKS: {len(callbacks_list)} configurados ===")
+        
+        return callbacks_list
+
+
     def evaluate_real_model(self, sequences_a: np.ndarray, sequences_b: np.ndarray, 
                            labels: np.ndarray) -> RealTemporalMetrics:
-        """Evalúa el modelo temporal REAL con métricas específicas."""
+        """Evalúa el modelo temporal con métricas específicas."""
         try:
-            logger.info("Evaluando modelo temporal REAL...")
+            logger.info("Evaluando modelo temporal...")
             
             # Predicciones
             distances = self.siamese_model.predict([sequences_a, sequences_b])
@@ -1228,12 +1419,12 @@ class RealSiameseDynamicNetwork:
                 genuine_mask = (labels == 1)
                 impostor_mask = (labels == 0)
                 
-                # FAR
+                # FAR: falsos aceptados / total impostores
                 false_accepts = np.sum((predictions == 1) & impostor_mask)
                 total_impostors = np.sum(impostor_mask)
                 far = false_accepts / total_impostors if total_impostors > 0 else 0
                 
-                # FRR
+                # FRR: falsos rechazados / total genuinos
                 false_rejects = np.sum((predictions == 0) & genuine_mask)
                 total_genuines = np.sum(genuine_mask)
                 frr = false_rejects / total_genuines if total_genuines > 0 else 0
@@ -1366,16 +1557,20 @@ class RealSiameseDynamicNetwork:
             return 0.0
     
     def predict_temporal_similarity_real(self, sequence1: np.ndarray, sequence2: np.ndarray) -> float:
-        """Predice similitud temporal REAL entre dos secuencias."""
+        """Predice similitud temporal entre dos secuencias."""
         try:
             if not self.is_trained:
+                logger.error("Modelo temporal no está entrenado")
                 raise ValueError("Modelo no entrenado")
             
             if self.siamese_model is None:
+                logger.error("Modelo siamés temporal no inicializado")
                 raise ValueError("Modelo no inicializado")
             
             # Validar dimensiones
             if sequence1.shape[1] != self.feature_dim or sequence2.shape[1] != self.feature_dim:
+                logger.error(f"Dimensiones incorrectas: esperado (*, {self.feature_dim}), "
+                         f"recibido {sequence1.shape}, {sequence2.shape}")
                 raise ValueError("Dimensiones incorrectas")
             
             # Ajustar secuencias
@@ -1402,7 +1597,7 @@ class RealSiameseDynamicNetwork:
             raise
     
     def save_real_model(self) -> bool:
-        """Guarda el modelo temporal REAL entrenado."""
+        """Guarda el modelo temporal entrenado."""
         try:
             if not self.is_trained or self.siamese_model is None:
                 logger.warning("Modelo no entrenado")
@@ -1422,7 +1617,7 @@ class RealSiameseDynamicNetwork:
                 'training_samples': len(self.real_training_samples),
                 'users_trained_count': self.users_trained_count,
                 'save_timestamp': datetime.now().isoformat(),
-                'version': '2.0_real'
+                'version': '2.0'
             }
             
             if self.current_metrics:
@@ -1451,33 +1646,41 @@ class RealSiameseDynamicNetwork:
         """Carga un modelo temporal REAL pre-entrenado."""
         try:
             if not self.model_save_path.exists():
-                logger.warning(f"Modelo no encontrado: {self.model_save_path}")
+                logger.warning(f"Archivo de modelo no encontrado: {self.model_save_path}")
                 return False
             
-            # Construir arquitectura
-            if not self.base_network:
-                self.build_real_base_network()
+            # Cargar modelo de Keras
+            self.siamese_model = keras.models.load_model(
+                str(self.model_save_path),
+                custom_objects={
+                    'contrastive_loss_real': self._contrastive_loss_real,
+                    'far_metric_real': self._far_metric_real,
+                    'frr_metric_real': self._frr_metric_real
+                }
+            )
             
-            if not self.siamese_model:
-                self.build_real_siamese_model()
+            # Cargar metadatos
+            metadata_path = self.model_save_path.with_suffix('.json')
+            if metadata_path.exists():
+                with open(metadata_path, 'r') as f:
+                    metadata = json.load(f)
+                
+                self.optimal_threshold = metadata.get('optimal_threshold', 0.5)
+                self.is_trained = metadata.get('is_trained', True)
+                
+                logger.info(f"✓ Modelo temporal REAL cargado: {self.model_save_path}")
+                logger.info(f"  - Umbral óptimo: {self.optimal_threshold}")
+                logger.info(f"  - Muestras de entrenamiento: {metadata.get('training_samples', 'N/A')}")
+                logger.info(f"  - Versión: {metadata.get('version', 'N/A')}")
             
-            if not self.is_compiled:
-                self.compile_real_model()
-            
-            # Cargar pesos
-            self.siamese_model.load_weights(str(self.model_save_path))
-            self.is_trained = True
             self.is_compiled = True
-            
-            logger.info(f"✓ Modelo cargado: {self.model_save_path}")
-            logger.info(f"Parámetros: {self.siamese_model.count_params():,}")
             
             return True
             
         except Exception as e:
-            logger.error(f"Error cargando modelo: {e}")
-            self.is_trained = False
+            logger.error("Error cargando modelo temporal REAL", e)
             return False
+
         
     def get_real_model_summary(self) -> Dict[str, Any]:
         """Obtiene resumen completo del modelo temporal REAL."""
@@ -1510,7 +1713,7 @@ class RealSiameseDynamicNetwork:
                 "status": {
                     "ready_for_inference": self.is_trained and self.is_compiled,
                     "model_saved": self.model_save_path.exists(),
-                    "version": "2.0_real"
+                    "version": "2.0"
                 }
             }
             
@@ -1583,49 +1786,3 @@ def get_real_siamese_dynamic_network(embedding_dim: int = 128,
 # Alias para compatibilidad
 SiameseDynamicNetwork = RealSiameseDynamicNetwork
 get_siamese_dynamic_network = get_real_siamese_dynamic_network
-
-
-# ===== TESTING =====
-if __name__ == "__main__":
-    print("=== TESTING MÓDULO 10: SIAMESE_DYNAMIC_NETWORK REAL ===")
-    
-    # Test 1: Inicialización
-    network = RealSiameseDynamicNetwork(embedding_dim=128, sequence_length=50, feature_dim=320)
-    print("✓ Red siamesa temporal inicializada")
-    
-    # Test 2: Construcción
-    try:
-        base_model = network.build_real_base_network()
-        siamese_model = network.build_real_siamese_model()
-        print(f"✓ Arquitectura construida: {siamese_model.count_params():,} parámetros")
-    except Exception as e:
-        print(f"✗ Error construyendo arquitectura: {e}")
-    
-    # Test 3: Compilación
-    try:
-        network.compile_real_model()
-        print("✓ Modelo compilado")
-    except Exception as e:
-        print(f"✗ Error compilando: {e}")
-    
-    # Test 4: Resumen
-    summary = network.get_real_model_summary()
-    print(f"✓ Resumen: {summary['architecture']['total_parameters']:,} parámetros")
-    print(f"  - Tipo: {summary['architecture']['model_type']}")
-    print(f"  - Entrenado: {summary['training']['is_trained']}")
-    print(f"  - Listo: {summary['status']['ready_for_inference']}")
-    print(f"  - Arquitectura: {summary['architecture']['sequence_processing']}")
-    print(f"  - LSTM units: {summary['architecture']['lstm_units']}")
-    print(f"  - Pooling: {summary['architecture']['temporal_pooling']}")
-    print(f"  - Versión: {summary['status']['version']}")
-    
-    # Test 5: Predicción
-    try:
-        seq1 = np.random.randn(25, 320)
-        seq2 = np.random.randn(30, 320)
-        similarity = network.predict_temporal_similarity_real(seq1, seq2)
-        print(f"✓ Predicción: {similarity:.3f}")
-    except Exception as e:
-        print(f"✓ Error esperado (no entrenado): {str(e)[:50]}...")
-    
-    print("=== FIN TESTING MÓDULO 10 REAL ===")

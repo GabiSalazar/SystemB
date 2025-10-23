@@ -1,6 +1,6 @@
 # =============================================================================
 # MÓDULO 9: SIAMESE_ANATOMICAL_NETWORK
-# Red Siamesa REAL para características anatómicas (100% SIN SIMULACIÓN)
+# Red Siamesa para características anatómicas
 # =============================================================================
 
 import numpy as np
@@ -40,7 +40,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -74,7 +74,7 @@ class TrainingMode(Enum):
 
 @dataclass
 class RealBiometricSample:
-    """Muestra biométrica REAL con características anatómicas."""
+    """Muestra biométrica con características anatómicas."""
     user_id: str
     sample_id: str
     features: np.ndarray
@@ -90,7 +90,7 @@ class RealBiometricSample:
 
 @dataclass
 class RealTrainingPair:
-    """Par de entrenamiento REAL para red siamesa."""
+    """Par de entrenamiento para red siamesa."""
     sample1: RealBiometricSample
     sample2: RealBiometricSample
     is_genuine: bool
@@ -99,7 +99,7 @@ class RealTrainingPair:
 
 @dataclass
 class RealModelMetrics:
-    """Métricas de evaluación REALES del modelo."""
+    """Métricas de evaluación del modelo."""
     far: float
     frr: float
     eer: float
@@ -118,7 +118,7 @@ class RealModelMetrics:
 
 @dataclass
 class RealTrainingHistory:
-    """Historial de entrenamiento REAL."""
+    """Historial de entrenamiento."""
     loss: List[float] = field(default_factory=list)
     val_loss: List[float] = field(default_factory=list)
     accuracy: List[float] = field(default_factory=list)
@@ -134,7 +134,7 @@ class RealTrainingHistory:
 
 class RealSiameseAnatomicalNetwork:
     """
-    Red Siamesa REAL para autenticación biométrica basada en características anatómicas.
+    Red Siamesa para autenticación biométrica basada en características anatómicas.
     Implementa arquitectura twin network para comparar características únicas de manos.
     """
     
@@ -143,6 +143,8 @@ class RealSiameseAnatomicalNetwork:
         
         if not TF_AVAILABLE:
             raise ImportError("TensorFlow no disponible - no se puede usar red siamesa")
+        
+        self.logger = get_logger()
         
         # Configuración del modelo
         self.embedding_dim = embedding_dim
@@ -154,20 +156,20 @@ class RealSiameseAnatomicalNetwork:
         self.siamese_model = None
         self.is_compiled = False
         
-        # Estado de entrenamiento REAL
+        # Estado de entrenamiento
         self.training_history = RealTrainingHistory()
         self.is_trained = False
         self.optimal_threshold = 0.5
         
-        # Dataset REAL y métricas
+        # Dataset y métricas
         self.real_training_samples: List[RealBiometricSample] = []
         self.real_validation_samples: List[RealBiometricSample] = []
         self.current_metrics: Optional[RealModelMetrics] = None
         
-        # Rutas de guardado REALES
+        # Rutas de guardado
         self.model_save_path = self._get_real_model_save_path()
         
-        # Estadísticas de entrenamiento REAL
+        # Estadísticas de entrenamiento
         self.users_trained_count = 0
         self.total_genuine_pairs = 0
         self.total_impostor_pairs = 0
@@ -175,23 +177,23 @@ class RealSiameseAnatomicalNetwork:
         logger.info("RealSiameseAnatomicalNetwork inicializada")
     
     def _load_real_siamese_config(self) -> Dict[str, Any]:
-        """Carga configuración REAL de la red siamesa anatómica."""
+        """Carga configuración de la red siamesa anatómica."""
         default_config = {
-            # Arquitectura de red REAL
+            # Arquitectura de red
             'hidden_layers': [128, 64],
             'activation': 'relu',
             'dropout_rate': 0.2,
             'batch_normalization': True,
             'l2_regularization': 0.001,
             
-            # Entrenamiento REAL
+            # Entrenamiento
             'learning_rate': 0.001,
             'batch_size': 32,
             'epochs': 100,
             'patience': 15,
             'validation_split': 0.2,
             
-            # Requisitos para datos REALES
+            # Requisitos para datos 
             'min_users_for_training': 2,
             'min_samples_per_user': 15,
             'max_samples_per_user': 50,
@@ -203,18 +205,18 @@ class RealSiameseAnatomicalNetwork:
             'margin': 1.5,
             'alpha': 0.2,
             
-            # Validación REAL
+            # Validación
             'use_stratified_split': True,
             'cross_validation_folds': 5,
             'threshold_optimization': 'eer',
             'quality_threshold': 80.0,
             
-            # Augmentación REAL
+            # Augmentación
             'use_real_augmentation': True,
             'temporal_jitter': 0.02,
             'noise_from_real_variance': True,
             
-            # Evaluación REAL
+            # Evaluación
             'require_independent_test': True,
             'min_test_users': 1,
             'performance_monitoring': True,
@@ -229,17 +231,17 @@ class RealSiameseAnatomicalNetwork:
     
     def load_real_training_data_from_database(self, database) -> bool:
         """
-        Carga datos anatómicos REALES desde la base de datos biométrica.
+        Carga datos anatómicos desde la base de datos biométrica.
         Procesa templates anatómicos y extrae características de 180D.
         """
         try:
-            logger.info("=== CARGANDO DATOS ANATÓMICOS REALES DESDE BASE DE DATOS ===")
+            logger.info("=== CARGANDO DATOS ANATÓMICOS DESDE BASE DE DATOS ===")
             
-            # Obtener todos los usuarios REALES
+            # Obtener todos los usuarios
             real_users = database.list_users()
             
             if len(real_users) < self.config.get('min_users_for_training', 2):
-                logger.error(f"Insuficientes usuarios REALES: {len(real_users)} < 2")
+                logger.error(f"Insuficientes usuarios: {len(real_users)} < 2")
                 return False
             
             logger.info(f"📊 Usuarios encontrados: {len(real_users)}")
@@ -268,6 +270,7 @@ class RealSiameseAnatomicalNetwork:
                     
                     # Filtrar templates anatómicos
                     anatomical_templates = []
+                    dynamic_templates = []
                     for template in user_templates_list:
                         template_type_str = str(template.template_type)
                         template_id = template.template_id
@@ -275,8 +278,12 @@ class RealSiameseAnatomicalNetwork:
                         if ('anatomical' in template_type_str.lower() and 
                             '_bootstrap_dynamic_' not in template_id):
                             anatomical_templates.append(template)
-                    
+                        elif 'dynamic' in template_type_str.lower():
+                            dynamic_templates.append(template)
+                            
                     logger.info(f"   📊 Templates anatómicos: {len(anatomical_templates)}")
+                    logger.info(f"   📊 Templates dinámicos: {len(dynamic_templates)} (omitidos - red anatómica)")
+
                     
                     # Procesar templates anatómicos
                     user_anatomical_samples = []
@@ -328,10 +335,21 @@ class RealSiameseAnatomicalNetwork:
                         total_samples_loaded += len(user_anatomical_samples)
                         self.real_training_samples.extend(user_anatomical_samples)
                         
+                        # Calcular estadísticas por gesto
+                        gesture_counts = {}
+                        for sample in user_anatomical_samples:
+                            gesture_name = sample.gesture_name
+                            if gesture_name not in gesture_counts:
+                                gesture_counts[gesture_name] = 0
+                            gesture_counts[gesture_name] += 1
+                            
                         logger.info(f"✅ Usuario anatómico válido: {user.username}")
                         logger.info(f"   📊 Muestras anatómicas: {len(user_anatomical_samples)}")
+                        logger.info(f"   🎯 Gestos únicos: {len(gesture_counts)}")
+                        for gesture, count in gesture_counts.items():
+                            logger.info(f"      • {gesture}: {count} muestras anatómicas")
                     else:
-                        logger.warning(f"   ⚠️ Usuario con pocas muestras: {len(user_anatomical_samples)}")
+                        logger.warning(f"   ⚠️ Usuario {user.user_id} con pocas muestras anatómicas: {len(user_anatomical_samples)} < {min_anatomical_samples}")
                     
                 except Exception as e:
                     logger.error(f"Error procesando usuario {user.user_id}: {e}")
@@ -349,6 +367,8 @@ class RealSiameseAnatomicalNetwork:
                 logger.error("❌ MUESTRAS ANATÓMICAS INSUFICIENTES")
                 return False
             
+            logger.info(f"Total muestras cargadas: {len(self.real_training_samples)} (sin dividir)")
+
             # Actualizar contador de usuarios
             self.users_trained_count = users_with_sufficient_data
             
@@ -360,6 +380,35 @@ class RealSiameseAnatomicalNetwork:
             logger.info(f"📊 Promedio por usuario: {total_samples_loaded/users_with_sufficient_data:.1f}")
             logger.info("=" * 60)
             
+            # Estadísticas detalladas por gesto
+            gesture_stats = {}
+            all_samples = self.real_training_samples + self.real_validation_samples
+            for sample in all_samples:
+                gesture_name = sample.gesture_name
+                if gesture_name not in gesture_stats:
+                    gesture_stats[gesture_name] = 0
+                gesture_stats[gesture_name] += 1
+            
+            logger.info(f"📈 DISTRIBUCIÓN POR GESTO:")
+            for gesture, count in gesture_stats.items():
+                logger.info(f"   • {gesture}: {count} muestras anatómicas")
+            
+            # Estadísticas por usuario
+            user_stats = {}
+            for sample in all_samples:
+                if sample.user_id not in user_stats:
+                    user_stats[sample.user_id] = 0
+                user_stats[sample.user_id] += 1
+            
+            logger.info(f"📈 DISTRIBUCIÓN POR USUARIO:")
+            for user_id, count in user_stats.items():
+                user_name = next((u.username for u in real_users if u.user_id == user_id), user_id)
+                logger.info(f"   • {user_name} ({user_id}): {count} muestras")
+
+            # ✅ CORRECCIÓN: Actualizar contador de usuarios entrenados
+            self.users_trained_count = len(user_stats)
+            logger.info(f"📊 Usuarios con datos suficientes registrados: {self.users_trained_count}")
+            
             return True
             
         except Exception as e:
@@ -367,10 +416,10 @@ class RealSiameseAnatomicalNetwork:
             return False
         
     def validate_real_data_quality(self) -> bool:
-        """Valida calidad de los datos REALES cargados."""
+        """Valida calidad de los datos cargados."""
         try:
             if not self.real_training_samples:
-                logger.error("No hay datos REALES para validar")
+                logger.error("No hay datos para validar")
                 return False
             
             # Agrupar por usuario
@@ -431,6 +480,8 @@ class RealSiameseAnatomicalNetwork:
             if len(gesture_distribution) < 3:
                 quality_issues.append(f"Pocos tipos de gestos: {len(gesture_distribution)}")
             
+            quality_scores = [getattr(s, 'quality_score', 1.0) for s in self.real_training_samples]
+
             # 4. Verificar calidad de muestras individuales
             low_quality_samples = []
             
@@ -446,6 +497,16 @@ class RealSiameseAnatomicalNetwork:
             if len(low_quality_samples) > len(self.real_training_samples) * 0.2:
                 quality_issues.append(f"Muchas muestras de baja calidad: {len(low_quality_samples)}/{len(self.real_training_samples)}")
             
+            # Verificar sesiones por usuario (relajado para few-shot learning)
+            session_counts = {}
+            for user_id, samples in users_data.items():
+                sessions = set(getattr(s, 'session_id', 'default') for s in samples)
+                session_counts[user_id] = len(sessions)
+                
+                if len(sessions) < 1:
+                    # Solo advertencia, no error crítico para few-shot learning
+                    logger.info(f"Usuario {user_id} con {len(sessions)} sesión(es) - OK para redes siamesas")
+                    
             # Reportar resultados
             if quality_issues:
                 logger.error("Problemas de calidad detectados:")
@@ -453,10 +514,12 @@ class RealSiameseAnatomicalNetwork:
                     logger.error(f"  - {issue}")
                 return False
             
-            logger.info("✓ Validación de calidad: EXITOSA")
+            logger.info("✓ Validación de calidad de datos: EXITOSA")
             logger.info(f"  - Usuarios: {len(users_data)}")
-            logger.info(f"  - Distancia inter-usuario: {min_inter_user_distance:.4f}")
+            logger.info(f"  - Distancia mínima inter-usuario: {min_inter_user_distance:.4f}")
             logger.info(f"  - Tipos de gestos: {len(gesture_distribution)}")
+            logger.info(f"  - Distribución de gestos: {gesture_distribution}")
+            logger.info(f"  - Sesiones promedio por usuario: {np.mean(list(session_counts.values())):.1f}")
             
             return True
             
@@ -468,9 +531,9 @@ class RealSiameseAnatomicalNetwork:
         """Crea pares de entrenamiento genuinos e impostores."""
         try:
             if not self.real_training_samples:
-                raise ValueError("No hay muestras REALES para crear pares")
+                raise ValueError("No hay muestras para crear pares")
             
-            logger.info("Creando pares de entrenamiento REALES...")
+            logger.info("Creando pares de entrenamiento...")
             
             # Agrupar muestras por usuario
             real_user_samples = {}
@@ -485,7 +548,7 @@ class RealSiameseAnatomicalNetwork:
                                if len(samples) >= min_samples}
             
             if len(valid_real_users) < 2:
-                raise ValueError(f"Necesitan mínimo 2 usuarios con {min_samples}+ muestras")
+                raise ValueError(f"Redes siamesas necesitan mínimo 2 usuarios con {min_samples}+ muestras")
             
             real_pairs = []
             
@@ -522,7 +585,7 @@ class RealSiameseAnatomicalNetwork:
                     int(genuine_pairs_created * 0.7)
                 )
                 
-                logger.info(f"Modo 2 usuarios: {target_impostor_pairs} pares impostores")
+                logger.info(f"Modo 2 usuarios: Creando {target_impostor_pairs} pares impostores de {max_possible_impostors} posible")
                 
                 pairs_created = 0
                 for s1 in samples1:
@@ -571,9 +634,13 @@ class RealSiameseAnatomicalNetwork:
             
             if impostor_pairs_created < genuine_pairs_created * min_impostor_ratio:
                 logger.warning(f"Balance subóptimo: {impostor_pairs_created} impostores vs {genuine_pairs_created} genuinos")
+                logger.warning(f"Ratio: {impostor_pairs_created/(genuine_pairs_created + impostor_pairs_created):.1%}")
+
                 if impostor_pairs_created < 10:
                     raise ValueError("Balance inadecuado para entrenamiento")
-            
+            else:
+                logger.info(f"Balance aceptable: {impostor_pairs_created} impostores ({impostor_pairs_created/(genuine_pairs_created + impostor_pairs_created):.1%})")
+                
             # Convertir a arrays numpy
             features_a = np.array([pair.sample1.features for pair in real_pairs])
             features_b = np.array([pair.sample2.features for pair in real_pairs])
@@ -592,17 +659,19 @@ class RealSiameseAnatomicalNetwork:
             logger.info(f"  - Genuinos: {genuine_pairs_created}")
             logger.info(f"  - Impostores: {impostor_pairs_created}")
             logger.info(f"  - Total: {len(real_pairs)}")
+            logger.info(f"  - Usuarios involucrados: {len(valid_real_users)}")
+            logger.info(f"  - Ratio genuinos/impostores: {genuine_pairs_created/impostor_pairs_created:.2f}" if impostor_pairs_created > 0 else "  - Solo pares genuinos")
             
             return features_a, features_b, labels
             
         except Exception as e:
-            logger.error(f"Error creando pares: {e}")
+            logger.error(f"Error creando pares de entrenamiento: {e}")
             raise
         
     def build_real_base_network(self) -> Model:
-        """Construye la red base REAL para embeddings anatómicos."""
+        """Construye la red base para embeddings anatómicos."""
         try:
-            logger.info("Construyendo red base REAL...")
+            logger.info("Construyendo red base para características anatómicas...")
             
             # Input layer
             input_layer = layers.Input(shape=(self.input_dim,), name='anatomical_features_real')
@@ -648,6 +717,8 @@ class RealSiameseAnatomicalNetwork:
             logger.info(f"Red base construida: {self.input_dim} → {self.embedding_dim}")
             logger.info(f"  - Parámetros: {total_params:,}")
             logger.info(f"  - Capas ocultas: {self.config['hidden_layers']}")
+            logger.info(f"  - Regularización L2: {self.config['l2_regularization']}")
+            logger.info(f"  - Dropout: {self.config['dropout_rate']}")
             
             return base_model
             
@@ -656,12 +727,12 @@ class RealSiameseAnatomicalNetwork:
             raise
     
     def build_real_siamese_model(self) -> Model:
-        """Construye el modelo siamés REAL completo."""
+        """Construye el modelo siamés completo."""
         try:
             if self.base_network is None:
                 self.build_real_base_network()
             
-            logger.info("Construyendo modelo siamés REAL...")
+            logger.info("Construyendo modelo siamés...")
             
             # Inputs para las dos ramas
             input_a = layers.Input(shape=(self.input_dim,), name='input_a_real')
@@ -671,7 +742,7 @@ class RealSiameseAnatomicalNetwork:
             embedding_a = self.base_network(input_a)
             embedding_b = self.base_network(input_b)
             
-            # Calcular distancia
+            # Calcular distancia entre embeddings
             if self.config['distance_metric'] == 'euclidean':
                 distance = layers.Lambda(
                     lambda embeddings: tf.sqrt(tf.reduce_sum(tf.square(embeddings[0] - embeddings[1]), axis=1, keepdims=True)),
@@ -755,12 +826,12 @@ class RealSiameseAnatomicalNetwork:
         )
     
     def compile_real_model(self):
-        """Compila el modelo siamés REAL."""
+        """Compila el modelo siamés."""
         try:
             if self.siamese_model is None:
                 self.build_real_siamese_model()
             
-            logger.info("Compilando modelo siamés REAL...")
+            logger.info("Compilando modelo siamés...")
             
             optimizer = optimizers.Adam(learning_rate=self.config['learning_rate'])
             
@@ -787,6 +858,7 @@ class RealSiameseAnatomicalNetwork:
             logger.error(f"Error compilando modelo: {e}")
             raise
     
+    #NUEVO
     def _create_real_training_callbacks(self) -> List:
         """Crea callbacks REALES para el entrenamiento."""
         callback_list = []
@@ -824,7 +896,7 @@ class RealSiameseAnatomicalNetwork:
         callback_list.append(checkpoint)
         
         return callback_list
-    
+    #NUEVO
     def _update_real_training_history(self, history, training_time: float):
         """Actualiza el historial de entrenamiento REAL."""
         try:
@@ -847,11 +919,11 @@ class RealSiameseAnatomicalNetwork:
     def train_with_real_data(self, database, validation_split: float = 0.2) -> RealTrainingHistory:
         """Entrena el modelo con datos REALES de usuarios."""
         try:
-            logger.info("=== INICIANDO ENTRENAMIENTO CON DATOS REALES ===")
+            logger.info("=== INICIANDO ENTRENAMIENTO ===")
             
             # 1. Cargar datos
             if not self.load_real_training_data_from_database(database):
-                raise ValueError("No se pudieron cargar datos REALES")
+                raise ValueError("No se pudieron cargar datos suficientes")
             
             # 2. Validar calidad
             if not self.validate_real_data_quality():
@@ -861,7 +933,7 @@ class RealSiameseAnatomicalNetwork:
             features_a, features_b, labels = self.create_real_training_pairs()
             
             # 4. División estratificada
-            logger.info(f"Dividiendo {len(labels)} pares...")
+            logger.info(f"Dividiendo {len(labels)} pares de entrenamiento...")
             
             genuine_indices = np.where(labels == 1)[0]
             impostor_indices = np.where(labels == 0)[0]
@@ -870,8 +942,9 @@ class RealSiameseAnatomicalNetwork:
             n_val_genuine = max(5, int(len(genuine_indices) * validation_split))
             n_val_impostor = max(5, int(len(impostor_indices) * validation_split))
             
+            logger.info(f"Pares disponibles: {len(genuine_indices)} genuinos, {len(impostor_indices)} impostores")
             logger.info(f"Para validación: {n_val_genuine} genuinos, {n_val_impostor} impostores")
-            
+
             np.random.seed(42)
             val_genuine = np.random.choice(genuine_indices, n_val_genuine, replace=False)
             val_impostor = np.random.choice(impostor_indices, n_val_impostor, replace=False)
@@ -880,9 +953,16 @@ class RealSiameseAnatomicalNetwork:
             train_indices = np.setdiff1d(np.arange(len(labels)), val_indices)
             
             logger.info(f"División: {len(train_indices)} entrenamiento, {len(val_indices)} validación")
+            logger.info(f"TOTAL USADO: {len(train_indices) + len(val_indices)} de {len(labels)} pares disponibles")
             
             train_a, train_b, train_labels = features_a[train_indices], features_b[train_indices], labels[train_indices]
             val_a, val_b, val_labels = features_a[val_indices], features_b[val_indices], labels[val_indices]
+            
+            logger.info(f"División de datos REALES:")
+            logger.info(f"  - Entrenamiento: {len(train_labels)} pares")
+            logger.info(f"  - Validación: {len(val_labels)} pares")
+            logger.info(f"  - Genuinos entrenamiento: {np.sum(train_labels)}")
+            logger.info(f"  - Impostores entrenamiento: {np.sum(1-train_labels)}")
             
             # 5. Compilar
             if not self.is_compiled:
@@ -892,7 +972,7 @@ class RealSiameseAnatomicalNetwork:
             callbacks_list = self._create_real_training_callbacks()
             
             # 7. Entrenar
-            logger.info("Iniciando entrenamiento...")
+            logger.info("Iniciando entrenamiento con datos...")
             start_time = time.time()
             
             history = self.siamese_model.fit(
@@ -919,10 +999,14 @@ class RealSiameseAnatomicalNetwork:
             logger.info(f"  - Épocas: {len(history.history['loss'])}")
             logger.info(f"  - EER: {final_metrics.eer:.4f}")
             logger.info(f"  - AUC: {final_metrics.auc_score:.4f}")
+            logger.info(f"  - Threshold óptimo: {final_metrics.threshold:.4f}")
+            
+            self.is_trained = True
+            logger.info("✓ Red anatómica marcada como entrenada")
             
             # Guardar modelo
             if self.save_real_model():
-                logger.info("✓ Modelo guardado")
+                logger.info("✓ Modelo anatómico guardado con metadatos")
             
             return self.training_history
             
@@ -930,11 +1014,151 @@ class RealSiameseAnatomicalNetwork:
             logger.error(f"Error durante entrenamiento: {e}")
             raise
     
+    def _create_user_stratified_split(self, validation_split: float) -> Tuple[np.ndarray, np.ndarray]:
+        """Crea división estratificada por usuarios REALES."""
+        try:
+            logger.info(f"Iniciando división con {len(self.real_training_samples)} pares totales")
+            
+            # Agrupar índices por usuario
+            user_indices = {}
+            for i, sample in enumerate(self.real_training_samples):
+                if sample.user_id not in user_indices:
+                    user_indices[sample.user_id] = []
+                user_indices[sample.user_id].append(i)
+            
+            # Dividir usuarios (no muestras)
+            user_ids = list(user_indices.keys())
+            
+            # VALIDACIÓN PREVIA
+            if len(user_ids) < 3:
+                logger.warning(f"Solo {len(user_ids)} usuarios - usando división MANUAL por muestras")
+                
+                # DIVISIÓN MANUAL QUE USA TODOS LOS DATOS
+                all_indices = np.arange(len(self.real_training_samples))
+                labels_for_split = np.array([1.0 if pair.is_genuine else 0.0 for pair in self.real_training_samples])
+                
+                # Separar por tipo de par
+                genuine_indices = all_indices[labels_for_split == 1]
+                impostor_indices = all_indices[labels_for_split == 0]
+                
+                # Dividir cada tipo proporcionalmente
+                n_val_genuine = max(3, int(len(genuine_indices) * validation_split))
+                n_val_impostor = max(3, int(len(impostor_indices) * validation_split))
+                
+                # Selección aleatoria estratificada
+                np.random.seed(42)
+                val_genuine = np.random.choice(genuine_indices, n_val_genuine, replace=False)
+                val_impostor = np.random.choice(impostor_indices, n_val_impostor, replace=False)
+                
+                val_indices = np.concatenate([val_genuine, val_impostor])
+                train_indices = np.setdiff1d(all_indices, val_indices)
+                
+                logger.info(f"División manual exitosa:")
+                logger.info(f"  - Entrenamiento: {len(train_indices)} pares")
+                logger.info(f"  - Validación: {len(val_indices)} pares") 
+                logger.info(f"  - TOTAL USADO: {len(train_indices) + len(val_indices)} de {len(all_indices)}")
+                
+                return train_indices, val_indices
+            
+            else:
+                # CON SUFICIENTES USUARIOS: DIVISIÓN POR USUARIOS
+                train_users, val_users = train_test_split(
+                    user_ids, 
+                    test_size=validation_split,
+                    random_state=42
+                )
+    
+                # Obtener índices de muestras para cada conjunto
+                train_sample_indices = []
+                val_sample_indices = []
+                
+                for user_id in train_users:
+                    train_sample_indices.extend(user_indices[user_id])
+                
+                for user_id in val_users:
+                    val_sample_indices.extend(user_indices[user_id])
+                
+                logger.info(f"División estratificada por usuarios REALES:")
+                logger.info(f"  - Usuarios entrenamiento: {len(train_users)}")
+                logger.info(f"  - Usuarios validación: {len(val_users)}")
+                
+                return np.array(train_sample_indices), np.array(val_sample_indices)
+                
+        except Exception as e:
+            logger.error("Error en división estratificada por usuarios", e)
+            # Fallback que usa TODOS los datos
+            total_samples = len(self.real_training_samples)
+            val_size = int(total_samples * validation_split)
+            train_size = total_samples - val_size
+            
+            return np.arange(train_size), np.arange(train_size, total_samples)
+    
+    def _create_real_training_callbacks(self) -> List:
+        """Crea callbacks REALES para el entrenamiento."""
+        callback_list = []
+        
+        # Early stopping
+        early_stopping = callbacks.EarlyStopping(
+            monitor='val_loss',
+            patience=self.config['patience'],
+            restore_best_weights=True,
+            verbose=1
+        )
+        callback_list.append(early_stopping)
+        
+        # Reduce learning rate on plateau
+        reduce_lr = callbacks.ReduceLROnPlateau(
+            monitor='val_loss',
+            factor=0.5,
+            patience=self.config['patience'] // 2,
+            min_lr=1e-7,
+            verbose=1
+        )
+        callback_list.append(reduce_lr)
+        
+        # Model checkpoint
+        #checkpoint_path = os.path.join(self.model_save_path, 'anatomical_model.h5')
+        checkpoint_path = str(self.model_save_path)
+        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+        
+        checkpoint = callbacks.ModelCheckpoint(
+            checkpoint_path,
+            monitor='val_loss',
+            save_best_only=True,
+            save_weights_only=False,
+            verbose=1
+        )
+        callback_list.append(checkpoint)
+        
+        return callback_list
+    
+    def _update_real_training_history(self, history, training_time: float):
+        """Actualiza el historial de entrenamiento."""
+        try:
+            self.training_history.loss = history.history['loss']
+            self.training_history.val_loss = history.history['val_loss']
+            
+            # Métricas adicionales si están disponibles
+            if 'far_metric_real' in history.history:
+                self.training_history.far_history = history.history['far_metric_real']
+            if 'frr_metric_real' in history.history:
+                self.training_history.frr_history = history.history['frr_metric_real']
+            
+            # Información de entrenamiento
+            self.training_history.total_training_time = training_time
+            self.training_history.best_epoch = np.argmin(self.training_history.val_loss)
+            
+            logger.info("Historial de entrenamiento actualizado")
+            
+        except Exception as e:
+            log_error("Error actualizando historial", e)
+    
     def evaluate_real_model(self, features_a: np.ndarray, features_b: np.ndarray, 
                        labels: np.ndarray) -> RealModelMetrics:
-        """Evalúa el modelo con datos REALES."""
+        """Evalúa el modelo."""
         try:
             if not self.is_trained:
+                logger.error("Modelo no está entrenado")
                 raise ValueError("Modelo no entrenado")
             
             logger.info("Evaluando modelo...")
@@ -946,6 +1170,9 @@ class RealSiameseAnatomicalNetwork:
             total_samples = len(labels)
             genuine_count = int(np.sum(labels == 1))
             impostor_count = int(np.sum(labels == 0))
+            
+            if total_samples == 0:
+                raise ValueError("No hay datos para evaluar")
             
             use_robust_method = total_samples < 20
             
@@ -960,12 +1187,21 @@ class RealSiameseAnatomicalNetwork:
                     impostor_median = np.median(impostor_distances)
                     
                     eer_threshold = (genuine_median + impostor_median) / 2.0
+                    
+                    logger.info(f"  Threshold calculado: mediana genuinos={genuine_median:.4f}, impostores={impostor_median:.4f}")
+
                 elif genuine_count > 0:
                     eer_threshold = np.percentile(distances[labels == 1], 75)
+                    logger.info("  Solo genuinos disponibles - usando percentil 75")
+
                 elif impostor_count > 0:
                     eer_threshold = np.percentile(distances[labels == 0], 25)
+                    logger.info("  Solo impostores disponibles - usando percentil 25")
+
                 else:
                     eer_threshold = np.mean(distances)
+                    logger.info("  Fallback - usando promedio de distancias")
+
                 
                 predictions = distances < eer_threshold
                 
@@ -992,7 +1228,7 @@ class RealSiameseAnatomicalNetwork:
                 except Exception:
                     auc_score = 0.5
             else:
-                logger.info(f"Dataset grande ({total_samples}) - método estándar")
+                logger.info(f"Dataset grande ({total_samples} muestras) - método estándar")
                 
                 try:
                     fpr, tpr, thresholds = roc_curve(labels, 1 - distances)
@@ -1002,7 +1238,12 @@ class RealSiameseAnatomicalNetwork:
                     eer_idx = np.nanargmin(np.absolute(fnr - fpr))
                     eer_threshold = thresholds[eer_idx]
                     eer = fpr[eer_idx]
+                    
+                    logger.info(f"  EER calculado: {eer:.4f} con threshold: {eer_threshold:.4f}")
+
                 except Exception:
+                    logger.error(f"Error en cálculo ROC estándar: {e}")
+
                     genuine_distances = distances[labels == 1] if genuine_count > 0 else []
                     impostor_distances = distances[labels == 0] if impostor_count > 0 else []
                     
@@ -1040,6 +1281,7 @@ class RealSiameseAnatomicalNetwork:
             tp = np.sum((predictions == 1) & (labels == 1))
             fp = np.sum((predictions == 1) & (labels == 0))
             fn = np.sum((predictions == 0) & (labels == 1))
+            tn = np.sum((predictions == 0) & (labels == 0))
             
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
@@ -1068,13 +1310,19 @@ class RealSiameseAnatomicalNetwork:
             
             self.optimal_threshold = eer_threshold
             
-            logger.info("Evaluación completada:")
-            logger.info(f"  - FAR: {far:.4f}")
-            logger.info(f"  - FRR: {frr:.4f}")
+            # Logging detallado y adaptativo
+            method_used = "Robusto (dataset pequeño)" if use_robust_method else "Estándar (dataset grande)"
+            logger.info("Evaluación REAL completada:")
+            logger.info(f"  - Método utilizado: {method_used}")
+            logger.info(f"  - FAR: {far:.4f} ({fp} falsos positivos de {impostor_count} impostores)")
+            logger.info(f"  - FRR: {frr:.4f} ({fn} falsos negativos de {genuine_count} genuinos)")
             logger.info(f"  - EER: {eer:.4f}")
             logger.info(f"  - AUC: {auc_score:.4f}")
             logger.info(f"  - Accuracy: {accuracy:.4f}")
-            logger.info(f"  - Threshold: {eer_threshold:.4f}")
+            logger.info(f"  - Threshold óptimo: {eer_threshold:.4f}")
+            logger.info(f"  - Pares genuinos evaluados: {genuine_count}")
+            logger.info(f"  - Pares impostores evaluados: {impostor_count}")
+            logger.info(f"  - Usuarios estimados en test: {estimated_users}")
             
             return metrics
             
@@ -1083,7 +1331,7 @@ class RealSiameseAnatomicalNetwork:
             raise
         
     def predict_similarity_real(self, features1: np.ndarray, features2: np.ndarray) -> float:
-        """Predice similitud REAL entre dos vectores."""
+        """Predice similitud entre dos vectores."""
         try:
             if not self.is_trained:
                 raise ValueError("Modelo no entrenado")
@@ -1112,15 +1360,17 @@ class RealSiameseAnatomicalNetwork:
     
     def authenticate_real(self, query_features: np.ndarray, 
                          reference_templates: List[np.ndarray]) -> Tuple[bool, float, Dict[str, Any]]:
-        """Autentica usuario REAL comparando con templates."""
+        """Autentica usuario comparando con templates."""
         try:
             if not self.is_trained:
+                logger.error("Modelo no está entrenado para autenticación")
                 return False, 0.0, {'error': 'Modelo no entrenado'}
             
             if not reference_templates:
+                logger.error("No hay templates de referencia")
                 return False, 0.0, {'error': 'Sin templates'}
             
-            logger.info(f"Autenticación: {len(reference_templates)} templates")
+            logger.info(f"Autenticación: comparando con {len(reference_templates)} templates")
             
             similarities = []
             for i, template in enumerate(reference_templates):
@@ -1161,11 +1411,13 @@ class RealSiameseAnatomicalNetwork:
                 'model_trained': self.is_trained,
                 'authentication_method': 'real_siamese_anatomical'
             }
-            
-            logger.info(f"Resultado:")
+                        
+            logger.info(f"Resultado autenticación:")
             logger.info(f"  - Auténtico: {is_authentic}")
-            logger.info(f"  - Score: {final_score:.4f}")
+            logger.info(f"  - Score máximo: {max_similarity:.4f}")
+            logger.info(f"  - Score final: {final_score:.4f}")
             logger.info(f"  - Threshold: {self.optimal_threshold:.4f}")
+            logger.info(f"  - Templates consultados: {len(reference_templates)}")
             
             return is_authentic, final_score, details
             
@@ -1202,7 +1454,7 @@ class RealSiameseAnatomicalNetwork:
                 'total_genuine_pairs': int(self.total_genuine_pairs),
                 'total_impostor_pairs': int(self.total_impostor_pairs),
                 'save_timestamp': datetime.now().isoformat(),
-                'version': '2.0_real',
+                'version': '2.0',
                 'config': self.config
             }
             
@@ -1223,7 +1475,7 @@ class RealSiameseAnatomicalNetwork:
             with open(metadata_path, 'w') as f:
                 json.dump(metadata, f, indent=2)
             
-            logger.info(f"Modelo guardado: {model_path}")
+            logger.info(f"Modelo anatómico guardado: {model_path}")
             logger.info(f"Metadatos: {metadata_path}")
             return True
             
@@ -1259,7 +1511,7 @@ class RealSiameseAnatomicalNetwork:
             self.is_trained = True
             self.is_compiled = True
             
-            logger.info(f"Modelo cargado: {model_path}")
+            logger.info(f"Modelo anatómico cargado: {model_path}")
             logger.info(f"Parámetros: {self.siamese_model.count_params():,}")
             
             return True
@@ -1295,7 +1547,7 @@ class RealSiameseAnatomicalNetwork:
                 "base_network_built": self.base_network is not None,
                 "siamese_model_built": self.siamese_model is not None,
                 "ready_for_inference": self.is_trained and self.is_compiled,
-                "version": "2.0_real"
+                "version": "2.0"
             }
         }
         

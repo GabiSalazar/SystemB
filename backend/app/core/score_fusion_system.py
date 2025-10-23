@@ -34,7 +34,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -86,7 +86,7 @@ class RealWeightOptimization(Enum):
 
 @dataclass
 class RealIndividualScores:
-    """Scores individuales REALES de ambas modalidades."""
+    """Scores individuales de ambas modalidades."""
     anatomical_score: float
     dynamic_score: float
     anatomical_confidence: float
@@ -98,7 +98,7 @@ class RealIndividualScores:
 
 @dataclass
 class RealFusedScore:
-    """Score fusionado REAL final con decisión."""
+    """Score fusionado final con decisión."""
     fused_score: float
     decision: bool
     confidence: float
@@ -147,61 +147,29 @@ class RealFusionConfiguration:
     cross_validation_folds: int
     optimization_metric: str
 
-
-def calculate_score_with_voting(similarities: List[float], 
-                               vote_threshold: float = 0.85,
-                               min_vote_ratio: float = 0.5) -> float:
-    """
-    Calcula score usando voting mechanism para reducir falsos positivos.
-    
-    Args:
-        similarities: Lista de scores de similitud
-        vote_threshold: Umbral para considerar un voto positivo
-        min_vote_ratio: Ratio mínimo de votos positivos requerido
-        
-    Returns:
-        Score final calculado con voting
-    """
-    if not similarities:
-        return 0.0
-    
-    similarities = np.array(similarities)
-    
-    # Contar votos por encima del umbral
-    positive_votes = np.sum(similarities >= vote_threshold)
-    total_votes = len(similarities)
-    vote_ratio = positive_votes / total_votes
-    
-    # Si hay suficientes votos positivos, retornar el promedio de los votos positivos
-    if vote_ratio >= min_vote_ratio:
-        positive_scores = similarities[similarities >= vote_threshold]
-        return float(np.mean(positive_scores))
-    else:
-        # Si no hay suficientes votos, retornar el máximo pero penalizado
-        return float(np.max(similarities) * vote_ratio)
-    
-    
 class RealScoreFusionSystem:
     """
-    Sistema de fusión multimodal REAL para autenticación biométrica.
+    Sistema de fusión multimodal para autenticación biométrica.
     Combina scores anatómicos y dinámicos para decisión final.
     """
     
     def __init__(self):
-        """Inicializa el sistema de fusión REAL."""
+        """Inicializa el sistema de fusión."""
         
         if not SKLEARN_AVAILABLE:
             raise ImportError("Scikit-learn no disponible")
         
-        # Configuración REAL
+        self.logger = get_logger()
+        
+        # Configuración
         self.config = self._load_real_fusion_config()
         
-        # Redes siamesas REALES
+        # Redes siamesas
         self.anatomical_network = None
         self.dynamic_network = None
         self.preprocessor = None
         
-        # Modelos de fusión entrenados con datos REALES
+        # Modelos de fusión entrenados
         self.real_fusion_models = {}
         self.real_score_calibrators = {}
         self.optimal_weights = {'anatomical': 0.5, 'dynamic': 0.5}
@@ -217,7 +185,7 @@ class RealScoreFusionSystem:
         logger.info("RealScoreFusionSystem inicializado")
     
     def _load_real_fusion_config(self) -> RealFusionConfiguration:
-        """Carga configuración REAL del sistema de fusión."""
+        """Carga configuración del sistema de fusión."""
         try:
             default_config = {
                 'fusion_strategy': 'weighted_average',
@@ -247,7 +215,7 @@ class RealScoreFusionSystem:
                 optimization_metric=config_dict['optimization_metric']
             )
             
-            logger.info("Configuración REAL de fusión cargada")
+            logger.info("Configuración de fusión cargada")
             return config
             
         except Exception as e:
@@ -266,9 +234,9 @@ class RealScoreFusionSystem:
             )
     
     def initialize_real_networks(self, anatomical_network, dynamic_network, preprocessor) -> bool:
-        """Inicializa las redes siamesas REALES y preprocesador."""
+        """Inicializa las redes siamesas y preprocesador."""
         try:
-            logger.info("Inicializando redes REALES en sistema de fusión...")
+            logger.info("Inicializando redes en sistema de fusión...")
             
             # Verificar redes entrenadas
             if not getattr(anatomical_network, 'is_trained', False):
@@ -299,7 +267,7 @@ class RealScoreFusionSystem:
             self.dynamic_network = dynamic_network
             self.preprocessor = preprocessor
             
-            logger.info("✓ Redes siamesas REALES inicializadas")
+            logger.info("✓ Redes siamesas inicializadas")
             logger.info(f"  - Red anatómica: entrenada")
             logger.info(f"  - Red dinámica: entrenada")
             
@@ -321,7 +289,7 @@ class RealScoreFusionSystem:
                 logger.info("✓ Sistema de fusión marcado como inicializado")
             else:
                 self.is_initialized = False
-                logger.error("✗ Falló inicialización")
+                logger.error("✗ Falló inicialización  de sistema de fusión")
                 
             return result
             
@@ -335,7 +303,7 @@ class RealScoreFusionSystem:
                                       reference_anatomical: List[np.ndarray],
                                       reference_dynamic: List[np.ndarray],
                                       user_id: str) -> RealIndividualScores:
-        """Predice scores individuales REALES de ambas modalidades."""
+        """Predice scores individuales de ambas modalidades."""
         try:
             logger.info(f"Prediciendo scores individuales para: {user_id}")
             
@@ -435,7 +403,7 @@ class RealScoreFusionSystem:
             )
     
     def _calculate_real_confidence(self, similarities: List[float]) -> float:
-        """Calcula confianza REAL basada en distribución de similitudes."""
+        """Calcula confianza basada en distribución de similitudes."""
         try:
             if not similarities:
                 return 0.0
@@ -471,7 +439,7 @@ class RealScoreFusionSystem:
         
     def fuse_real_scores(self, individual_scores: RealIndividualScores,
                         strategy: Optional[RealFusionStrategy] = None) -> RealFusedScore:
-        """Fusiona scores individuales REALES usando la estrategia especificada."""
+        """Fusiona scores individuales usando la estrategia especificada."""
         try:
             if strategy is None:
                 strategy = self.config.fusion_strategy
@@ -548,6 +516,7 @@ class RealScoreFusionSystem:
             logger.info(f"  - Score: {fused_score:.3f}")
             logger.info(f"  - Decisión: {'✓ Aceptado' if decision else '✗ Rechazado'}")
             logger.info(f"  - Confianza: {decision_confidence:.3f}")
+            logger.info(f"  - Estrategia: {strategy.value}")
             
             return fused_result
             
@@ -563,7 +532,7 @@ class RealScoreFusionSystem:
             )
     
     def _calibrate_real_score(self, score: float, modality: str) -> float:
-        """Calibra score REAL de una modalidad específica."""
+        """Calibra score de una modalidad específica."""
         try:
             if not self.is_calibrated or modality not in self.real_score_calibrators:
                 return score
@@ -588,7 +557,7 @@ class RealScoreFusionSystem:
     
     def _get_real_fusion_weights(self, individual_scores: RealIndividualScores, 
                                 strategy: RealFusionStrategy) -> Dict[str, float]:
-        """Obtiene pesos de fusión REALES basados en la estrategia."""
+        """Obtiene pesos de fusión basados en la estrategia."""
         try:
             if strategy == RealFusionStrategy.ADAPTIVE_FUSION and self.config.use_confidence_weighting:
                 total_conf = individual_scores.anatomical_confidence + individual_scores.dynamic_confidence
@@ -748,13 +717,13 @@ class RealScoreFusionSystem:
             return 0.5
         
     def train_real_fusion_models(self, real_training_data: List[Tuple[RealIndividualScores, bool]]) -> bool:
-        """Entrena modelos de fusión usando solo datos REALES de usuarios."""
+        """Entrena modelos de fusión."""
         try:
             if len(real_training_data) < 10:
                 logger.error(f"Datos insuficientes: {len(real_training_data)} < 10")
                 return False
             
-            logger.info(f"Entrenando modelos con {len(real_training_data)} muestras REALES...")
+            logger.info(f"Entrenando modelos con {len(real_training_data)} muestras...")
             
             # Preparar datos
             X = []
@@ -809,7 +778,7 @@ class RealScoreFusionSystem:
                 logger.error(f"Error entrenando random forest: {e}")
             
             self.is_trained = True
-            logger.info(f"✓ Modelos entrenados: {list(self.real_fusion_models.keys())}")
+            logger.info(f"✓ Modelos de fusión entrenados: {list(self.real_fusion_models.keys())}")
             
             return True
             
@@ -848,6 +817,8 @@ class RealScoreFusionSystem:
                 try:
                     fpr, tpr, thresholds = roc_curve(true_labels, predictions)
                     
+                    fnr = 1 - tpr
+                    
                     # Validación antes del cálculo
                     if len(np.unique(true_labels)) < 2:
                         eer_threshold = 0.5
@@ -855,7 +826,7 @@ class RealScoreFusionSystem:
                         logger.warning("Solo una clase, usando EER por defecto")
                     else:
                         try:
-                            fnr = 1 - tpr
+                            
                             eer_differences = np.absolute(fnr - fpr)
                             eer_idx = np.nanargmin(eer_differences)
                             eer_threshold = thresholds[eer_idx] if eer_idx < len(thresholds) else 0.5
@@ -919,7 +890,7 @@ class RealScoreFusionSystem:
             self.real_score_calibrators['dynamic'] = self._fit_real_score_calibrator(dyn_scores, labels)
             
             self.is_calibrated = True
-            logger.info("✓ Calibración completada")
+            logger.info("✓ Calibración de scores completada")
             
             return True
             
@@ -928,7 +899,7 @@ class RealScoreFusionSystem:
             return False
     
     def _fit_real_score_calibrator(self, scores: np.ndarray, labels: np.ndarray) -> Dict[str, Any]:
-        """Ajusta calibrador para una modalidad específica usando datos REALES."""
+        """Ajusta calibrador para una modalidad específica."""
         try:
             calibrator = {}
             
@@ -960,13 +931,13 @@ class RealScoreFusionSystem:
             return {'identity': True}
         
     def evaluate_real_fusion_system(self, real_test_data: List[Tuple[RealIndividualScores, bool]]) -> RealFusionMetrics:
-        """Evalúa el sistema de fusión completo usando solo datos REALES."""
+        """Evalúa el sistema de fusión."""
         try:
             if len(real_test_data) < 5:
                 logger.error("Datos insuficientes para evaluación")
                 return None
             
-            logger.info(f"Evaluando sistema con {len(real_test_data)} muestras REALES...")
+            logger.info(f"Evaluando sistema con {len(real_test_data)} muestras...")
             
             # Predecir con fusión
             fused_predictions = []
@@ -1093,7 +1064,7 @@ class RealScoreFusionSystem:
     def _evaluate_real_calibration_quality(self, predictions: np.ndarray, 
                                           confidence_scores: np.ndarray, 
                                           true_labels: np.ndarray) -> float:
-        """Evalúa calidad de calibración usando datos REALES."""
+        """Evalúa calidad de calibración."""
         try:
             n_bins = min(10, len(predictions) // 2)
             if n_bins < 2:
@@ -1146,7 +1117,7 @@ class RealScoreFusionSystem:
         try:
             summary = {
                 "status": "real_system",
-                "version": "2.0_real",
+                "version": "2.0",
                 "is_real_data": True,
                 "no_synthetic_data": True,
                 "config": {
@@ -1188,7 +1159,7 @@ class RealScoreFusionSystem:
                 "is_real_data": True
             }
     def save_real_fusion_system(self, filepath: Optional[str] = None) -> bool:
-        """Guarda el sistema de fusión REAL completo."""
+        """Guarda el sistema de fusión completo."""
         try:
             if filepath is None:
                 models_dir = Path(get_config('paths.models', 'biometric_data/models'))
@@ -1206,7 +1177,7 @@ class RealScoreFusionSystem:
                 'is_initialized': self.is_initialized,
                 'fusion_metrics': self.fusion_metrics,
                 'training_history': self.training_history,
-                'version': '2.0_real',
+                'version': '2.0',
                 'is_real_data': True,
                 'no_synthetic_data': True
             }
@@ -1214,15 +1185,15 @@ class RealScoreFusionSystem:
             with open(filepath, 'wb') as f:
                 pickle.dump(save_data, f)
             
-            logger.info(f"✓ Sistema guardado: {filepath}")
+            logger.info(f"✓ Sistema de fusión guardado: {filepath}")
             return True
             
         except Exception as e:
-            logger.error(f"Error guardando sistema: {e}")
+            logger.error(f"Error guardando sistema de fusión: {e}")
             return False
     
     def load_real_fusion_system(self, filepath: str) -> bool:
-        """Carga un sistema de fusión REAL previamente entrenado."""
+        """Carga un sistema de fusión previamente entrenado."""
         try:
             if not Path(filepath).exists():
                 logger.error(f"Archivo no encontrado: {filepath}")
@@ -1282,104 +1253,3 @@ FusionStrategy = RealFusionStrategy
 ScoreCalibration = RealScoreCalibration
 WeightOptimization = RealWeightOptimization
 
-
-# ===== TESTING =====
-if __name__ == "__main__":
-    print("=== TESTING MÓDULO 12: SCORE_FUSION REAL ===")
-    
-    # Test 1: Inicialización
-    fusion_system = RealScoreFusionSystem()
-    print("✓ Sistema de fusión inicializado")
-    
-    # Test 2: Configuración
-    config = fusion_system.config
-    print(f"✓ Config: {config.fusion_strategy.value}, pesos: {config.anatomical_weight:.2f}/{config.dynamic_weight:.2f}")
-    
-    # Test 3: Scores individuales
-    try:
-        real_individual_scores = RealIndividualScores(
-            anatomical_score=0.85,
-            dynamic_score=0.72,
-            anatomical_confidence=0.90,
-            dynamic_confidence=0.80,
-            user_id="real_test_user",
-            timestamp=time.time()
-        )
-        print(f"✓ Scores individuales: Anat={real_individual_scores.anatomical_score:.2f}, Dyn={real_individual_scores.dynamic_score:.2f}")
-    except Exception as e:
-        print(f"✗ Error creando scores: {e}")
-    
-    # Test 4: Fusión básica
-    try:
-        fused_result = fusion_system.fuse_real_scores(real_individual_scores)
-        print(f"✓ Fusión: Score={fused_result.fused_score:.3f}, Decisión={'✓' if fused_result.decision else '✗'}")
-        print(f"  Confianza={fused_result.confidence:.3f}, Estrategia={fused_result.fusion_strategy.value}")
-    except Exception as e:
-        print(f"✗ Error en fusión: {e}")
-    
-    # Test 5: Diferentes estrategias
-    try:
-        strategies = [RealFusionStrategy.WEIGHTED_AVERAGE, RealFusionStrategy.PRODUCT_RULE, RealFusionStrategy.MAX_RULE]
-        
-        for strategy in strategies:
-            result = fusion_system.fuse_real_scores(real_individual_scores, strategy)
-            print(f"✓ {strategy.value}: Score={result.fused_score:.3f}")
-    except Exception as e:
-        print(f"✗ Error probando estrategias: {e}")
-    
-    # Test 6: Datos de entrenamiento simulados
-    try:
-        real_training_data = []
-        
-        for i in range(10):
-            scores = RealIndividualScores(
-                anatomical_score=0.7 + 0.3 * (i % 2),
-                dynamic_score=0.6 + 0.3 * (i % 2),
-                anatomical_confidence=0.8,
-                dynamic_confidence=0.8,
-                user_id=f"real_user_{i//2}",
-                timestamp=time.time()
-            )
-            
-            label = (i % 2 == 0)
-            real_training_data.append((scores, label))
-        
-        print(f"✓ Datos de ejemplo creados: {len(real_training_data)} muestras")
-        
-        # Optimización de pesos
-        optimized_weights = fusion_system.optimize_real_fusion_weights(real_training_data[:8])
-        print(f"✓ Pesos optimizados: Anat={optimized_weights['anatomical']:.3f}, Dyn={optimized_weights['dynamic']:.3f}")
-        
-        # Entrenamiento de modelos
-        models_trained = fusion_system.train_real_fusion_models(real_training_data[:6])
-        print(f"✓ Modelos entrenados: {models_trained}")
-        
-        # Calibración
-        calibration_success = fusion_system.calibrate_real_scores(real_training_data[:8])
-        print(f"✓ Calibración: {calibration_success}")
-        
-        # Evaluación
-        evaluation_metrics = fusion_system.evaluate_real_fusion_system(real_training_data[8:])
-        if evaluation_metrics:
-            print(f"✓ Evaluación: EER={evaluation_metrics.eer:.4f}, AUC={evaluation_metrics.auc_score:.4f}")
-        
-    except Exception as e:
-        print(f"✗ Error en testing avanzado: {e}")
-    
-    # Test 7: Resumen del sistema
-    try:
-        summary = fusion_system.get_real_fusion_summary()
-        print(f"✓ Resumen: Entrenado={summary['training']['is_trained']}, Modelos={len(summary['training']['available_fusion_models'])}")
-        print(f"  Versión: {summary['version']}, Solo datos reales: {summary['is_real_data']}")
-    except Exception as e:
-        print(f"✗ Error obteniendo resumen: {e}")
-    
-    # Test 8: Voting mechanism
-    try:
-        test_similarities = [0.92, 0.88, 0.91, 0.45, 0.89]
-        voting_score = calculate_score_with_voting(test_similarities, vote_threshold=0.85, min_vote_ratio=0.5)
-        print(f"✓ Voting mechanism: Score={voting_score:.3f} (de {len(test_similarities)} similitudes)")
-    except Exception as e:
-        print(f"✗ Error en voting: {e}")
-    
-    print("=== FIN TESTING MÓDULO 12 ===")

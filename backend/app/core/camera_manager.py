@@ -17,7 +17,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -246,6 +246,23 @@ class CameraManager:
             
             return False, None
     
+    def capture_enhanced_frame(self) -> Tuple[bool, Optional[np.ndarray], Optional[np.ndarray]]:
+        """
+        Captura un frame y aplica mejora de imagen.
+        """
+        ret, frame = self.capture_frame()
+
+        if not ret or frame is None:
+            return False, None, None
+
+        try:
+            enhanced_frame = self.enhance_image(frame)
+            return True, frame, enhanced_frame
+
+        except Exception as e:
+            log_error("Error mejorando imagen", e)
+            return ret, frame, frame
+
     def enhance_image(self, image: np.ndarray) -> np.ndarray:
         """
         Mejora la nitidez y calidad de la imagen.

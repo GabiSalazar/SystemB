@@ -89,6 +89,30 @@ class StatsResponse(BaseModel):
 # ENDPOINTS
 # ====================================================================
 
+@router.get("/enrollment/health")
+async def enrollment_health_check():
+    """
+    Verifica que el módulo de Enrollment System esté operativo.
+    """
+    try:
+        enrollment_system = get_real_enrollment_system()
+        return {
+            "status": "healthy",
+            "module": "Enrollment System",
+            "initialized": True,
+            "bootstrap_mode": enrollment_system.bootstrap_mode,
+            "active_sessions": len(enrollment_system.active_sessions),
+            "total_users_in_db": len(enrollment_system.database.list_users()),
+            "networks_trained": enrollment_system.stats.get('networks_trained', False),
+            "message": "✅ Módulo 15 (Enrollment System) cargado correctamente"
+        }
+    except Exception as e:
+        import traceback
+        logger.error(f"Error en health check: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error verificando módulo: {str(e)}")
+
+
 @router.post("/enrollment/start", response_model=EnrollmentStartResponse)
 async def start_enrollment(request: EnrollmentStartRequest):
     """

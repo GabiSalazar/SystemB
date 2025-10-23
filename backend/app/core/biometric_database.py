@@ -241,7 +241,7 @@ class VectorIndex:
                 self._build_hierarchical()
             
             self.is_built = True
-            logger.info(f"Índice construido: {len(self.embeddings)} embeddings, {self.strategy.value}")
+            logger.info(f"Índice construido: {len(self.embeddings)} embeddings, estrategia {self.strategy.value}")
             
         except Exception as e:
             logger.error(f"Error construyendo índice: {e}")
@@ -595,344 +595,9 @@ class BiometricDatabase:
             logger.info("Encriptación deshabilitada - generando clave temporal")
             return Fernet.generate_key()
     
-    def _calculate_template_checksum(self, template: BiometricTemplate) -> str:
-        """Calcula checksum de integridad del template."""
-        try:
-            data_string = f"{template.user_id}{template.template_type.value}{template.created_at}"
-            
-            if template.anatomical_embedding is not None:
-                data_string += str(np.sum(template.anatomical_embedding))
-            
-            if template.dynamic_embedding is not None:
-                data_string += str(np.sum(template.dynamic_embedding))
-            
-            return hashlib.sha256(data_string.encode()).hexdigest()[:16]
-            
-        except Exception as e:
-            logger.error(f"Error calculando checksum: {e}")
-            return ""
-    
-    def _update_stats(self):
-        """Actualiza estadísticas de la base de datos."""
-        try:
-            total_size = 0
-            for root, dirs, files in os.walk(self.db_path):
-                total_size += sum(os.path.getsize(os.path.join(root, file)) for file in files)
-            
-            self.stats.total_size_mb = total_size / 1024 / 1024
-            self.stats.last_updated = time.time()
-            
-            stats_file = self.db_path / 'database_stats.json'
-            with open(stats_file, 'w') as f:
-                json.dump(asdict(self.stats), f, indent=2)
-                
-        except Exception as e:
-            logger.error(f"Error actualizando estadísticas: {e}")
-    
-    def _save_user(self, user_profile: UserProfile):
-        """Guarda perfil de usuario en disco."""
-        try:
-            user_file = self.db_path / 'users' / f'{user_profile.user_id}.json'
-            
-            print(f"🔍 DEBUG: Guardando usuario {user_profile.user_id}")
-            print(f"🔍 DEBUG: Ruta: {user_file}")
-            
-            user_data = asdict(user_profile)
-            
-            with open(user_file, 'w', encoding='utf-8') as f:
-                json.dump(user_data, f, indent=2)
-            
-            print(f"✅ DEBUG: Usuario guardado en {user_file}")
-            
-        except Exception as e:
-            print(f"❌ DEBUG ERROR guardando usuario: {e}")
-            import traceback
-            traceback.print_exc()
-            logger.error(f"Error guardando usuario: {e}")
-            
-    def _save_template(self, template: BiometricTemplate):
-        """Guarda template en disco SIN ENCRIPTACIÓN - VERSIÓN DEBUG."""
-        try:
-            print(f"🔧 DEBUG: Iniciando guardado template {template.template_id}")
-            
-            templates_dir = self.db_path / 'templates'
-            templates_dir.mkdir(parents=True, exist_ok=True)
-            print(f"📁 DEBUG: Directorio templates: {templates_dir}")
-            
-            template_file = templates_dir / f'{template.template_id}.json'
-            
-            template_data = {
-                'template_id': template.template_id,
-                'user_id': template.user_id,
-                'template_type': template.template_type.value if hasattr(template.template_type, 'value') else str(template.template_type),
-                'gesture_name': template.gesture_name,
-                'hand_side': getattr(template, 'hand_side', 'unknown'),
-                'quality_score': float(template.quality_score) if template.quality_score is not None else None,
-                'confidence': float(template.confidence) if template.confidence is not None else None,
-                'created_at': template.created_at,
-                'updated_at': template.updated_at,
-                'last_used': getattr(template, 'last_used', template.created_at),
-                'enrollment_session': getattr(template, 'enrollment_session', ''),
-                'verification_count': getattr(template, 'verification_count', 0),
-                'success_count': getattr(template, 'success_count', 0),
-                'is_encrypted': False,
-                'checksum': getattr(template, 'checksum', ''),
-                'metadata': getattr(template, 'metadata', {}),
-                'anatomical_embedding': None,
-                'dynamic_embedding': None
-            }
-            
-            print(f"📋 DEBUG: Metadatos preparados")
-            
-            with open(template_file, 'w', encoding='utf-8') as f:
-                json.dump(template_data, f, indent=2, default=str)
-            
-            print(f"✅ DEBUG: JSON guardado: {template_file}")
-            print(f"📦 DEBUG: Tamaño JSON: {template_file.stat().st_size} bytes")
-            
-            embeddings_data = {}
-            
-            if hasattr(template, 'anatomical_embedding') and template.anatomical_embedding is not None:
-                print(f"🧠 DEBUG: Embedding anatómico encontrado")
-                print(f"   📊 Tipo: {type(template.anatomical_embedding)}")
-                
-                if isinstance(template.anatomical_embedding, np.ndarray):
-                    print(f"   📐 Shape: {template.anatomical_embedding.shape}")
-                    print(f"   📈 Dtype: {template.anatomical_embedding.dtype}")
-                    print(f"   📊 Norma: {np.linalg.norm(template.anatomical_embedding):.6f}")
-                    
-                    embeddings_data['anatomical'] = template.anatomical_embedding.copy()
-                    print(f"   ✅ Embedding anatómico agregado")
-            else:
-                print(f"⚠️ DEBUG: No hay embedding anatómico")
-            
-            if hasattr(template, 'dynamic_embedding') and template.dynamic_embedding is not None:
-                print(f"🔄 DEBUG: Embedding dinámico encontrado")
-                print(f"   📊 Tipo: {type(template.dynamic_embedding)}")
-                
-                if isinstance(template.dynamic_embedding, np.ndarray):
-                    print(f"   📐 Shape: {template.dynamic_embedding.shape}")
-                    print(f"   📈 Dtype: {template.dynamic_embedding.dtype}")
-                    print(f"   📊 Norma: {np.linalg.norm(template.dynamic_embedding):.6f}")
-                    
-                    embeddings_data['dynamic'] = template.dynamic_embedding.copy()
-                    print(f"   ✅ Embedding dinámico agregado")
-            else:
-                print(f"⚠️ DEBUG: No hay embedding dinámico")
-            
-            if embeddings_data:
-                embeddings_file = templates_dir / f'{template.template_id}.bin'
-                
-                print(f"🔐 DEBUG: Guardando {len(embeddings_data)} embeddings sin encriptar")
-                print(f"   📋 Embeddings: {list(embeddings_data.keys())}")
-                
-                try:
-                    serialized_data = pickle.dumps(embeddings_data, protocol=pickle.HIGHEST_PROTOCOL)
-                    print(f"📦 DEBUG: Datos serializados: {len(serialized_data)} bytes")
-                    
-                    with open(embeddings_file, 'wb') as f:
-                        f.write(serialized_data)
-                        f.flush()
-                    
-                    print(f"✅ DEBUG: BIN guardado sin encriptar: {embeddings_file}")
-                    print(f"📦 DEBUG: Tamaño final BIN: {embeddings_file.stat().st_size} bytes")
-                    
-                    print(f"🔍 DEBUG: Verificando archivo...")
-                    
-                    with open(embeddings_file, 'rb') as f:
-                        test_data = f.read()
-                    
-                    print(f"📦 DEBUG: Leído para verificación: {len(test_data)} bytes")
-                    
-                    test_embeddings = pickle.loads(test_data)
-                    print(f"✅ DEBUG: Deserialización exitosa")
-                    print(f"📋 DEBUG: Claves recuperadas: {list(test_embeddings.keys())}")
-                    
-                    for key, embedding in test_embeddings.items():
-                        if isinstance(embedding, np.ndarray):
-                            print(f"   ✅ {key}: {embedding.shape}, norma={np.linalg.norm(embedding):.6f}")
-                        else:
-                            print(f"   ❌ {key}: tipo incorrecto {type(embedding)}")
-                    
-                except Exception as save_error:
-                    print(f"❌ DEBUG: Error guardando embeddings: {save_error}")
-                    import traceback
-                    traceback.print_exc()
-                    raise
-                    
-            else:
-                print(f"⚠️ DEBUG: No hay embeddings para guardar")
-            
-            print(f"🎉 DEBUG: Template {template.template_id} guardado completamente")
-            
-        except Exception as e:
-            print(f"❌ DEBUG: Error en _save_template: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
-    
-    def _load_template(self, template_id: str) -> Optional[BiometricTemplate]:
-        """Carga template desde disco - VERSIÓN CORREGIDA."""
-        try:
-            print(f"🔍 DEBUG: Cargando template {template_id}")
-            
-            template_file = self.db_path / 'templates' / f'{template_id}.json'
-            print(f"   📄 Buscando JSON: {template_file}")
-            
-            if not template_file.exists():
-                print(f"   ❌ Archivo JSON no existe")
-                return None
-            
-            try:
-                with open(template_file, 'r', encoding='utf-8') as f:
-                    template_data = json.load(f)
-            except Exception as json_error:
-                print(f"   ❌ Error leyendo JSON: {json_error}")
-                return None
-            
-            print(f"   ✅ JSON cargado")
-            print(f"   📋 Tipo: {template_data.get('template_type')}")
-            print(f"   👤 Usuario: {template_data.get('user_id')}")
-            
-            embeddings_file = self.db_path / 'templates' / f'{template_id}.bin'
-            print(f"   📦 Buscando BIN: {embeddings_file}")
-            
-            embeddings_data = {}
-            
-            if embeddings_file.exists():
-                file_size = embeddings_file.stat().st_size
-                print(f"   ✅ Archivo BIN existe - Tamaño: {file_size} bytes")
-                
-                if file_size == 0:
-                    print(f"   ⚠️ Archivo BIN vacío")
-                    embeddings_data = {}
-                else:
-                    try:
-                        with open(embeddings_file, 'rb') as f:
-                            embeddings_bytes = f.read()
-                        
-                        print(f"   📦 Bytes leídos: {len(embeddings_bytes)}")
-                        
-                        encryption_enabled = self.config.get('encryption_enabled', False)
-                        print(f"   🔐 Encriptación en config: {encryption_enabled}")
-                        
-                        should_decrypt = encryption_enabled
-                        
-                        if should_decrypt and CRYPTO_AVAILABLE:
-                            try:
-                                print(f"   🔓 Intentando desencriptar...")
-                                if hasattr(self, 'cipher') and self.cipher is not None:
-                                    embeddings_bytes = self.cipher.decrypt(embeddings_bytes)
-                                    print(f"   ✅ Desencriptación exitosa")
-                                else:
-                                    print(f"   ❌ Cipher no disponible")
-                            except Exception as decrypt_error:
-                                print(f"   ⚠️ Error desencriptando: {decrypt_error}")
-                                with open(embeddings_file, 'rb') as f:
-                                    embeddings_bytes = f.read()
-                        else:
-                            print(f"   ℹ️ Sin encriptación")
-                        
-                        print(f"   🔄 Deserializando...")
-                        try:
-                            embeddings_data = pickle.loads(embeddings_bytes)
-                            print(f"   ✅ Deserialización exitosa")
-                            print(f"   📋 Claves: {list(embeddings_data.keys())}")
-                            
-                            for key, embedding in embeddings_data.items():
-                                if embedding is None:
-                                    print(f"      ⚠️ {key}: None")
-                                elif isinstance(embedding, np.ndarray):
-                                    print(f"      ✅ {key}: {embedding.shape}")
-                                else:
-                                    print(f"      ❌ {key}: tipo incorrecto")
-                                    try:
-                                        converted = np.array(embedding, dtype=np.float32)
-                                        embeddings_data[key] = converted
-                                        print(f"         🔄 Convertido: {converted.shape}")
-                                    except:
-                                        embeddings_data[key] = None
-                            
-                        except Exception as pickle_error:
-                            print(f"   ❌ Error pickle: {pickle_error}")
-                            embeddings_data = {}
-                            
-                    except Exception as file_error:
-                        print(f"   ❌ Error leyendo BIN: {file_error}")
-                        embeddings_data = {}
-            else:
-                print(f"   ⚠️ Archivo BIN no existe")
-                embeddings_data = {}
-            
-            anatomical_embedding = embeddings_data.get('anatomical')
-            dynamic_embedding = embeddings_data.get('dynamic')
-            
-            print(f"   🧠 Anatómico disponible: {anatomical_embedding is not None}")
-            print(f"   🔄 Dinámico disponible: {dynamic_embedding is not None}")
-            
-            template_data_copy = template_data.copy()
-            template_data_copy['anatomical_embedding'] = anatomical_embedding
-            template_data_copy['dynamic_embedding'] = dynamic_embedding
-            
-            template_type_value = template_data_copy.get('template_type')
-            if isinstance(template_type_value, str):
-                try:
-                    if template_type_value == 'anatomical':
-                        template_data_copy['template_type'] = TemplateType.ANATOMICAL
-                    elif template_type_value == 'dynamic':
-                        template_data_copy['template_type'] = TemplateType.DYNAMIC
-                    elif template_type_value == 'multimodal':
-                        template_data_copy['template_type'] = TemplateType.MULTIMODAL
-                    else:
-                        template_data_copy['template_type'] = TemplateType.ANATOMICAL
-                except Exception as enum_error:
-                    print(f"   ❌ Error enum: {enum_error}")
-                    template_data_copy['template_type'] = TemplateType.ANATOMICAL
-            
-            print(f"   🏗️ Creando BiometricTemplate...")
-            
-            try:
-                required_fields = {
-                    'user_id': template_data_copy.get('user_id', 'unknown'),
-                    'template_id': template_data_copy.get('template_id', template_id),
-                    'template_type': template_data_copy.get('template_type', TemplateType.ANATOMICAL),
-                    'gesture_name': template_data_copy.get('gesture_name', 'Unknown'),
-                    'quality_score': float(template_data_copy.get('quality_score', 0.0)),
-                    'confidence': float(template_data_copy.get('confidence', 0.0)),
-                    'enrollment_session': template_data_copy.get('enrollment_session', ''),
-                    'created_at': template_data_copy.get('created_at', time.time()),
-                    'updated_at': template_data_copy.get('updated_at', time.time()),
-                    'metadata': template_data_copy.get('metadata', {}),
-                    'checksum': template_data_copy.get('checksum', ''),
-                    'anatomical_embedding': anatomical_embedding,
-                    'dynamic_embedding': dynamic_embedding
-                }
-                
-                optional_fields = ['last_used', 'verification_count', 'success_count', 'is_encrypted']
-                for field in optional_fields:
-                    if field in template_data_copy:
-                        required_fields[field] = template_data_copy[field]
-                
-                template = BiometricTemplate(**required_fields)
-                
-                print(f"   ✅ BiometricTemplate creado")
-                print(f"✅ DEBUG: Template {template_id} cargado exitosamente")
-                return template
-                
-            except Exception as template_error:
-                print(f"   ❌ Error creando template: {template_error}")
-                import traceback
-                traceback.print_exc()
-                return None
-            
-        except Exception as e:
-            print(f"❌ DEBUG: Error general: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
     
     def _load_database(self):
-        """Carga datos existentes de la base de datos - VERSIÓN FINAL CORREGIDA."""
+        """Carga datos existentes de la base de datos."""
         try:
             users_loaded = 0
             templates_loaded = 0
@@ -973,6 +638,7 @@ class BiometricDatabase:
                             logger.info(f"   👤 ID: {user_profile.user_id}")
                             logger.info(f"   📝 Nombre: {user_profile.username}")
                             logger.info(f"   🎯 Gestos: {user_profile.gesture_sequence}")
+                            logger.info(f"   📊 Templates: {user_profile.total_enrollments}")
                             
                         except Exception as profile_error:
                             logger.error(f"❌ Error creando UserProfile: {profile_error}")
@@ -1046,14 +712,16 @@ class BiometricDatabase:
                                         if loaded_template and (loaded_template.anatomical_embedding is not None or loaded_template.dynamic_embedding is not None):
                                             anatomical_emb = loaded_template.anatomical_embedding
                                             dynamic_emb = loaded_template.dynamic_embedding
-                                            print(f"   ✅ Cargado desde .bin")
+                                            print(f"   ✅ Cargado desde .bin - A:{anatomical_emb is not None}, D:{dynamic_emb is not None}")
                                             load_method = "bin"
                                             
                                             if anatomical_emb is not None:
                                                 print(f"   📊 Shape anatómico: {anatomical_emb.shape}")
+                                                print(f"   📊 Norma anatómica: {np.linalg.norm(anatomical_emb):.6f}")
                                             
                                             if dynamic_emb is not None:
                                                 print(f"   📊 Shape dinámico: {dynamic_emb.shape}")
+                                                print(f"   📊 Norma dinámica: {np.linalg.norm(dynamic_emb):.6f}")
                                         else:
                                             print(f"   ⚠️ _load_template sin embeddings")
                                             
@@ -1122,6 +790,8 @@ class BiometricDatabase:
                             logger.info(f"   🆔 ID: {template.template_id}")
                             logger.info(f"   👤 Usuario: {template.user_id}")
                             logger.info(f"   🤚 Gesto: {template.gesture_name}")
+                            logger.info(f"   📊 Calidad: {template.quality_score:.2f}")
+                            logger.info(f"   🔧 Bootstrap: {is_bootstrap}")
                             
                         except Exception as template_error:
                             logger.error(f"❌ Error creando template: {template_error}")
@@ -1159,7 +829,7 @@ class BiometricDatabase:
                     
                     if missing_in_lists:
                         inconsistencies_found += 1
-                        logger.info(f"⚠️ Inconsistencia {user_id}:")
+                        logger.info(f"⚠️ Inconsistencia usuario {user_id}:")
                         logger.info(f"   📁 Templates sin listar: {len(missing_in_lists)}")
                         
                         for tid in missing_in_lists:
@@ -1171,6 +841,7 @@ class BiometricDatabase:
                             elif template.template_type == TemplateType.MULTIMODAL:
                                 user_profile.multimodal_templates.append(tid)
                             templates_added += 1
+                            logger.info(f"      ✅ Agregado: {tid[:8]}... ({template.template_type.value})")
                         
                         user_profile.total_enrollments = (
                             len(user_profile.anatomical_templates) + 
@@ -1181,7 +852,7 @@ class BiometricDatabase:
                         self._save_user(user_profile)
                     
                     else:
-                        logger.info(f"✅ Usuario {user_id}: consistente")
+                        logger.info(f"✅ Usuario {user_id}: consistente ({len(actual_template_ids)} templates)")
                 
                 if inconsistencies_found > 0:
                     logger.info(f"🔧 Consistencia corregida:")
@@ -1300,10 +971,10 @@ class BiometricDatabase:
             return False
     
     def store_user_profile(self, user_profile: UserProfile) -> bool:
-        """Almacena un perfil de usuario completo - MÉTODO FALTANTE CORREGIDO."""
+        """Almacena un perfil de usuario completo."""
         try:
             with self.lock:
-                logger.info(f"Almacenando perfil: {user_profile.user_id}")
+                logger.info(f"Almacenando perfil de usuario: {user_profile.user_id}")
                 
                 if user_profile.user_id in self.users:
                     logger.info(f"Usuario {user_profile.user_id} existe - actualizando")
@@ -1350,7 +1021,7 @@ class BiometricDatabase:
                     self.stats.total_users += 1
                     self._update_stats()
                     
-                    logger.info(f"Usuario {user_profile.user_id} creado")
+                    logger.info(f"Usuario {user_profile.user_id} creado exitosamente")
                     return True
                     
         except Exception as e:
@@ -1358,13 +1029,13 @@ class BiometricDatabase:
             return False
     
     def store_biometric_template(self, template: BiometricTemplate) -> bool:
-        """Almacena template biométrico - MÉTODO COMPLETAMENTE CORREGIDO."""
+        """Almacena template biométrico."""
         try:
             with self.lock:
                 logger.info(f"Almacenando template: {template.template_id}")
                 
                 if template.user_id not in self.users:
-                    logger.error(f"Usuario {template.user_id} no existe")
+                    logger.error(f"Usuario {template.user_id} no existe para template {template.template_id}")
                     return False
                 
                 if template.template_id in self.templates:
@@ -1401,7 +1072,7 @@ class BiometricDatabase:
                             template.template_id, 
                             template.user_id
                         )
-                        logger.info(f"Template dinámico agregado al índice")
+                        logger.info(f"Template dinámico agregado al índice vectorial")
                     except Exception as e:
                         logger.info(f"Error índice dinámico: {e}")
                 
@@ -1410,15 +1081,15 @@ class BiometricDatabase:
                 if template.template_type == TemplateType.ANATOMICAL:
                     if template.template_id not in user_profile.anatomical_templates:
                         user_profile.anatomical_templates.append(template.template_id)
-                        logger.info(f"Template anatómico agregado al perfil")
+                        logger.info(f"Template anatómico agregado al perfil del usuario")
                 elif template.template_type == TemplateType.DYNAMIC:
                     if template.template_id not in user_profile.dynamic_templates:
                         user_profile.dynamic_templates.append(template.template_id)
-                        logger.info(f"Template dinámico agregado al perfil")
+                        logger.info(f"Template dinámico agregado al perfil del usuario")
                 else:
                     if template.template_id not in user_profile.multimodal_templates:
                         user_profile.multimodal_templates.append(template.template_id)
-                        logger.info(f"Template multimodal agregado al perfil")
+                        logger.info(f"Template multimodal agregado al perfil del usuario")
                 
                 user_profile.total_enrollments += 1
                 user_profile.updated_at = time.time()
@@ -1451,7 +1122,7 @@ class BiometricDatabase:
                 try:
                     self.anatomical_index.build_index()
                     self.dynamic_index.build_index()
-                    logger.info(f"Índices reconstruidos")
+                    logger.info(f"Índices vectorialesreconstruidos")
                 except Exception as e:
                     logger.info(f"Error reconstruyendo índices: {e}")
                 
@@ -1463,6 +1134,7 @@ class BiometricDatabase:
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             return False
+        
     
     def enroll_template(self, user_id: str, 
                        anatomical_embedding: Optional[np.ndarray] = None,
@@ -1512,6 +1184,29 @@ class BiometricDatabase:
                     metadata=metadata or {}
                 )
                 
+                # AGREGAR SECUENCIA TEMPORAL SI EXISTE
+                if hasattr(sample, 'temporal_sequence') and sample.temporal_sequence is not None:
+                    template.metadata['temporal_sequence'] = sample.temporal_sequence.tolist()
+                    template.metadata['sequence_length'] = sample.sequence_length
+                    template.metadata['has_temporal_data'] = True
+                    log_info(f"Template con secuencia temporal: {sample.sequence_length} frames")
+                else:
+                    template.metadata['has_temporal_data'] = False
+
+                # ✅ AGREGAR CARACTERÍSTICAS ANATÓMICAS RAW PARA REENTRENAMIENTO
+                if anatomical_features is not None:
+                    template.metadata['bootstrap_features'] = anatomical_features.tolist()
+                    template.metadata['feature_dimensions'] = len(anatomical_features)
+                    template.metadata['has_anatomical_raw'] = True
+                    log_info(f"Template con características anatómicas raw: {len(anatomical_features)} dimensiones")
+                else:
+                    template.metadata['has_anatomical_raw'] = False
+                
+                # ✅ MARCAR MODO BOOTSTRAP CORRECTAMENTE
+                template.metadata['bootstrap_mode'] = sample_metadata.get('bootstrap_mode', False) if sample_metadata else False
+                template.metadata['data_source'] = sample_metadata.get('data_source', 'enrollment_capture') if sample_metadata else 'enrollment_capture'
+
+
                 template.checksum = self._calculate_template_checksum(template)
                 
                 self.templates[template_id] = template
@@ -1777,6 +1472,371 @@ class BiometricDatabase:
             logger.error(f"Error eliminando template: {e}")
             return False
     
+    def _save_user(self, user_profile: UserProfile):
+        """Guarda perfil de usuario en disco."""
+        try:
+            user_file = self.db_path / 'users' / f'{user_profile.user_id}.json'
+            
+            print(f"🔍 DEBUG: Guardando usuario {user_profile.user_id}")
+            print(f"🔍 DEBUG: Ruta: {user_file}")
+            print(f"🔍 DEBUG: Directorio existe: {user_file.parent.exists()}")
+            
+            user_data = asdict(user_profile)
+            
+            with open(user_file, 'w', encoding='utf-8') as f:
+                json.dump(user_data, f, indent=2)
+            
+            print(f"✅ DEBUG: Usuario guardado en {user_file}")
+            
+        except Exception as e:
+            print(f"❌ DEBUG ERROR guardando usuario: {e}")
+            import traceback
+            traceback.print_exc()
+            logger.error(f"Error guardando usuario: {e}")
+            
+    def _save_template(self, template: BiometricTemplate):
+        """Guarda template en disco SIN ENCRIPTACIÓN - VERSIÓN DEBUG."""
+        try:
+            print(f"🔧 DEBUG: Iniciando guardado template {template.template_id}")
+            
+            templates_dir = self.db_path / 'templates'
+            templates_dir.mkdir(parents=True, exist_ok=True)
+            print(f"📁 DEBUG: Directorio templates: {templates_dir}")
+            
+            template_file = templates_dir / f'{template.template_id}.json'
+            
+            template_data = {
+                'template_id': template.template_id,
+                'user_id': template.user_id,
+                'template_type': template.template_type.value if hasattr(template.template_type, 'value') else str(template.template_type),
+                'gesture_name': template.gesture_name,
+                'hand_side': getattr(template, 'hand_side', 'unknown'),
+                'quality_score': float(template.quality_score) if template.quality_score is not None else None,
+                'confidence': float(template.confidence) if template.confidence is not None else None,
+                'created_at': template.created_at,
+                'updated_at': template.updated_at,
+                'last_used': getattr(template, 'last_used', template.created_at),
+                'enrollment_session': getattr(template, 'enrollment_session', ''),
+                'verification_count': getattr(template, 'verification_count', 0),
+                'success_count': getattr(template, 'success_count', 0),
+                'is_encrypted': False,
+                'checksum': getattr(template, 'checksum', ''),
+                'metadata': getattr(template, 'metadata', {}),
+                'anatomical_embedding': None,
+                'dynamic_embedding': None
+            }
+            
+            print(f"📋 DEBUG: Metadatos preparados")
+            
+            with open(template_file, 'w', encoding='utf-8') as f:
+                json.dump(template_data, f, indent=2, default=str)
+            
+            print(f"✅ DEBUG: JSON guardado: {template_file}")
+            print(f"📦 DEBUG: Tamaño JSON: {template_file.stat().st_size} bytes")
+            
+            embeddings_data = {}
+            
+            if hasattr(template, 'anatomical_embedding') and template.anatomical_embedding is not None:
+                print(f"🧠 DEBUG: Embedding anatómico encontrado")
+                print(f"   📊 Tipo: {type(template.anatomical_embedding)}")
+                
+                if isinstance(template.anatomical_embedding, np.ndarray):
+                    print(f"   📐 Shape: {template.anatomical_embedding.shape}")
+                    print(f"   📈 Dtype: {template.anatomical_embedding.dtype}")
+                    print(f"   📊 Min: {template.anatomical_embedding.min():.6f}")
+                    print(f"   📊 Max: {template.anatomical_embedding.max():.6f}")
+                    print(f"   📊 Norma: {np.linalg.norm(template.anatomical_embedding):.6f}")
+                    
+                    embeddings_data['anatomical'] = template.anatomical_embedding.copy()
+                    print(f"   ✅ Embedding anatómico agregado")
+            else:
+                print(f"⚠️ DEBUG: No hay embedding anatómico")
+            
+            if hasattr(template, 'dynamic_embedding') and template.dynamic_embedding is not None:
+                print(f"🔄 DEBUG: Embedding dinámico encontrado")
+                print(f"   📊 Tipo: {type(template.dynamic_embedding)}")
+                
+                if isinstance(template.dynamic_embedding, np.ndarray):
+                    print(f"   📐 Shape: {template.dynamic_embedding.shape}")
+                    print(f"   📈 Dtype: {template.dynamic_embedding.dtype}")
+                    print(f"   📊 Min: {template.dynamic_embedding.min():.6f}")
+                    print(f"   📊 Max: {template.dynamic_embedding.max():.6f}")
+                    print(f"   📊 Norma: {np.linalg.norm(template.dynamic_embedding):.6f}")
+                    
+                    embeddings_data['dynamic'] = template.dynamic_embedding.copy()
+                    print(f"   ✅ Embedding dinámico agregado")
+            else:
+                print(f"⚠️ DEBUG: No hay embedding dinámico")
+            
+            if embeddings_data:
+                embeddings_file = templates_dir / f'{template.template_id}.bin'
+                
+                print(f"🔐 DEBUG: Guardando {len(embeddings_data)} embeddings sin encriptar")
+                print(f"   📋 Embeddings: {list(embeddings_data.keys())}")
+                
+                try:
+                    serialized_data = pickle.dumps(embeddings_data, protocol=pickle.HIGHEST_PROTOCOL)
+                    print(f"📦 DEBUG: Datos serializados: {len(serialized_data)} bytes")
+                    
+                    with open(embeddings_file, 'wb') as f:
+                        f.write(serialized_data)
+                        f.flush()
+                    
+                    print(f"✅ DEBUG: BIN guardado sin encriptar: {embeddings_file}")
+                    print(f"📦 DEBUG: Tamaño final BIN: {embeddings_file.stat().st_size} bytes")
+                    
+                    print(f"🔍 DEBUG: Verificando archivo...")
+                    
+                    with open(embeddings_file, 'rb') as f:
+                        test_data = f.read()
+                    
+                    print(f"📦 DEBUG: Leído para verificación: {len(test_data)} bytes")
+                    
+                    test_embeddings = pickle.loads(test_data)
+                    print(f"✅ DEBUG: Deserialización exitosa")
+                    print(f"📋 DEBUG: Claves recuperadas: {list(test_embeddings.keys())}")
+                    
+                    for key, embedding in test_embeddings.items():
+                        if isinstance(embedding, np.ndarray):
+                            print(f"   ✅ {key}: {embedding.shape}, norma={np.linalg.norm(embedding):.6f}")
+                        else:
+                            print(f"   ❌ {key}: tipo incorrecto {type(embedding)}")
+                    
+                except Exception as save_error:
+                    print(f"❌ DEBUG: Error guardando embeddings: {save_error}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
+                    
+            else:
+                print(f"⚠️ DEBUG: No hay embeddings para guardar")
+            
+            print(f"🎉 DEBUG: Template {template.template_id} guardado completamente")
+            
+        except Exception as e:
+            print(f"❌ DEBUG: Error en _save_template: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+    
+    def _load_template(self, template_id: str) -> Optional[BiometricTemplate]:
+        """Carga template desde disco"""
+        try:
+            print(f"🔍 DEBUG: Cargando template {template_id}")
+            
+            template_file = self.db_path / 'templates' / f'{template_id}.json'
+            print(f"   📄 Buscando JSON: {template_file}")
+            
+            if not template_file.exists():
+                print(f"   ❌ Archivo JSON no existe")
+                return None
+            
+            try:
+                with open(template_file, 'r', encoding='utf-8') as f:
+                    template_data = json.load(f)
+            except Exception as json_error:
+                print(f"   ❌ Error leyendo JSON: {json_error}")
+                return None
+            
+            print(f"   ✅ JSON cargado")
+            print(f"   📋 Tipo template: {template_data.get('template_type')}")
+            print(f"   👤 Usuario: {template_data.get('user_id')}")
+            print(f"   🤌 Gesto: {template_data.get('gesture_name', 'N/A')}")
+            print(f"   🔐 Encriptado según JSON: {template_data.get('is_encrypted', 'N/A')}")
+            
+            embeddings_file = self.db_path / 'templates' / f'{template_id}.bin'
+            print(f"   📦 Buscando BIN: {embeddings_file}")
+            
+            embeddings_data = {}
+            
+            if embeddings_file.exists():
+                file_size = embeddings_file.stat().st_size
+                print(f"   ✅ Archivo BIN existe - Tamaño: {file_size} bytes")
+                
+                if file_size == 0:
+                    print(f"   ⚠️ Archivo BIN vacío")
+                    embeddings_data = {}
+                else:
+                    try:
+                        with open(embeddings_file, 'rb') as f:
+                            embeddings_bytes = f.read()
+                        
+                        print(f"   📦 Bytes leídos: {len(embeddings_bytes)}")
+                        
+                        encryption_enabled = self.config.get('encryption_enabled', False)
+                        print(f"   🔐 Encriptación en config: {encryption_enabled}")
+                        
+                        should_decrypt = encryption_enabled
+                        
+                        if should_decrypt and CRYPTO_AVAILABLE:
+                            try:
+                                print(f"   🔓 Intentando desencriptar...")
+                                if hasattr(self, 'cipher') and self.cipher is not None:
+                                    embeddings_bytes = self.cipher.decrypt(embeddings_bytes)
+                                    print(f"   ✅ Desencriptación exitosa")
+                                else:
+                                    print(f"   ❌ Cipher no disponible")
+                            except Exception as decrypt_error:
+                                print(f"   ⚠️ Error desencriptando: {decrypt_error}")
+                                with open(embeddings_file, 'rb') as f:
+                                    embeddings_bytes = f.read()
+                        else:
+                            print(f"   ℹ️ Sin encriptación")
+                        
+                        print(f"   🔄 Deserializando...")
+                        try:
+                            embeddings_data = pickle.loads(embeddings_bytes)
+                            print(f"   ✅ Deserialización exitosa")
+                            print(f"   📋 Claves: {list(embeddings_data.keys())}")
+                            
+                            for key, embedding in embeddings_data.items():
+                                if embedding is None:
+                                    print(f"      ⚠️ {key}: None")
+                                elif isinstance(embedding, np.ndarray):
+                                    print(f"      ✅ {key}: shape={embedding.shape}, dtype={embedding.dtype}")
+                                    print(f"         📊 Norma: {np.linalg.norm(embedding):.6f}")
+                                    print(f"         📊 Min: {embedding.min():.6f}, Max: {embedding.max():.6f}")
+                                    print(f"         📊 NaN count: {np.sum(np.isnan(embedding))}")
+                                    print(f"         📊 Inf count: {np.sum(np.isinf(embedding))}")
+                                else:
+                                    print(f"      ❌ {key}: tipo incorrecto")
+                                    try:
+                                        converted = np.array(embedding, dtype=np.float32)
+                                        embeddings_data[key] = converted
+                                        print(f"         🔄 Convertido a numpy: {converted.shape}")
+                                    except:
+                                        embeddings_data[key] = None
+                            
+                        except Exception as pickle_error:
+                            print(f"   ❌ Error pickle: {pickle_error}")
+                            embeddings_data = {}
+                            
+                    except Exception as file_error:
+                        print(f"   ❌ Error leyendo BIN: {file_error}")
+                        embeddings_data = {}
+            else:
+                print(f"   ⚠️ Archivo BIN no existe")
+                embeddings_data = {}
+            
+            anatomical_embedding = embeddings_data.get('anatomical')
+            dynamic_embedding = embeddings_data.get('dynamic')
+            
+            print(f"   🧠 Embedding anatómico disponible: {anatomical_embedding is not None}")
+            print(f"   🔄 Embedding dinámico disponible: {dynamic_embedding is not None}")
+            
+            template_data_copy = template_data.copy()
+            template_data_copy['anatomical_embedding'] = anatomical_embedding
+            template_data_copy['dynamic_embedding'] = dynamic_embedding
+            
+            template_type_value = template_data_copy.get('template_type')
+            if isinstance(template_type_value, str):
+                try:
+                    if template_type_value == 'anatomical':
+                        template_data_copy['template_type'] = TemplateType.ANATOMICAL
+                    elif template_type_value == 'dynamic':
+                        template_data_copy['template_type'] = TemplateType.DYNAMIC
+                    elif template_type_value == 'multimodal':
+                        template_data_copy['template_type'] = TemplateType.MULTIMODAL
+                    else:
+                        print(f"   ⚠️ Tipo desconocido '{template_type_value}', usando ANATOMICAL")
+                        template_data_copy['template_type'] = TemplateType.ANATOMICAL
+                except Exception as enum_error:
+                    print(f"   ❌ Error enum: {enum_error}")
+                    template_data_copy['template_type'] = TemplateType.ANATOMICAL
+            
+            print(f"   🏗️ Creando BiometricTemplate...")
+            
+            try:
+                required_fields = {
+                    'user_id': template_data_copy.get('user_id', 'unknown'),
+                    'template_id': template_data_copy.get('template_id', template_id),
+                    'template_type': template_data_copy.get('template_type', TemplateType.ANATOMICAL),
+                    'gesture_name': template_data_copy.get('gesture_name', 'Unknown'),
+                    'quality_score': float(template_data_copy.get('quality_score', 0.0)),
+                    'confidence': float(template_data_copy.get('confidence', 0.0)),
+                    'enrollment_session': template_data_copy.get('enrollment_session', ''),
+                    'created_at': template_data_copy.get('created_at', time.time()),
+                    'updated_at': template_data_copy.get('updated_at', time.time()),
+                    'metadata': template_data_copy.get('metadata', {}),
+                    'checksum': template_data_copy.get('checksum', ''),
+                    'anatomical_embedding': anatomical_embedding,
+                    'dynamic_embedding': dynamic_embedding
+                }
+                
+                optional_fields = ['last_used', 'verification_count', 'success_count', 'is_encrypted']
+                for field in optional_fields:
+                    if field in template_data_copy:
+                        required_fields[field] = template_data_copy[field]
+                
+                template = BiometricTemplate(**required_fields)
+                
+                print(f"   ✅ BiometricTemplate creado exitosamente")
+
+                print(f"   🔍 VERIFICACIÓN FINAL:")
+                print(f"      ID: {template.template_id}")
+                print(f"      Usuario: {template.user_id}")
+                print(f"      Tipo: {template.template_type}")
+                print(f"      Gesto: {template.gesture_name}")
+                print(f"      Anatómico disponible: {'✅' if template.anatomical_embedding is not None else '❌'}")
+                print(f"      Dinámico disponible: {'✅' if template.dynamic_embedding is not None else '❌'}")
+                
+                if template.anatomical_embedding is not None:
+                    print(f"      Anatómico shape: {template.anatomical_embedding.shape}")
+                    print(f"      Anatómico norma: {np.linalg.norm(template.anatomical_embedding):.6f}")
+                
+                if template.dynamic_embedding is not None:
+                    print(f"      Dinámico shape: {template.dynamic_embedding.shape}")
+                    print(f"      Dinámico norma: {np.linalg.norm(template.dynamic_embedding):.6f}")
+                
+                print(f"✅ DEBUG: Template {template_id} cargado exitosamente")
+                return template
+                
+            except Exception as template_error:
+                print(f"   ❌ Error creando template: {template_error}")
+                import traceback
+                traceback.print_exc()
+                return None
+            
+        except Exception as e:
+            print(f"❌ DEBUG: Error general: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def _calculate_template_checksum(self, template: BiometricTemplate) -> str:
+        """Calcula checksum de integridad del template."""
+        try:
+            data_string = f"{template.user_id}{template.template_type.value}{template.created_at}"
+            
+            if template.anatomical_embedding is not None:
+                data_string += str(np.sum(template.anatomical_embedding))
+            
+            if template.dynamic_embedding is not None:
+                data_string += str(np.sum(template.dynamic_embedding))
+            
+            return hashlib.sha256(data_string.encode()).hexdigest()[:16]
+            
+        except Exception as e:
+            logger.error(f"Error calculando checksum: {e}")
+            return ""
+    
+    def _update_stats(self):
+        """Actualiza estadísticas de la base de datos."""
+        try:
+            total_size = 0
+            for root, dirs, files in os.walk(self.db_path):
+                total_size += sum(os.path.getsize(os.path.join(root, file)) for file in files)
+            
+            self.stats.total_size_mb = total_size / 1024 / 1024
+            self.stats.last_updated = time.time()
+            
+            stats_file = self.db_path / 'database_stats.json'
+            with open(stats_file, 'w') as f:
+                json.dump(asdict(self.stats), f, indent=2)
+                
+        except Exception as e:
+            logger.error(f"Error actualizando estadísticas: {e}")
+    
     def create_backup(self) -> bool:
         """Crea backup completo de la base de datos."""
         try:
@@ -1845,7 +1905,7 @@ class BiometricDatabase:
                 
                 current_checksum = self._calculate_template_checksum(template)
                 if current_checksum != template.checksum:
-                    issues.append(f"Checksum inválido: {template_id}")
+                    issues.append(f"Checksum inválido en template: {template_id}")
             
             anatomical_count = len(self.anatomical_index.template_ids)
             dynamic_count = len(self.dynamic_index.template_ids)
@@ -1905,7 +1965,7 @@ class BiometricDatabase:
             with open(export_path, 'w') as f:
                 json.dump(export_data, f, indent=2, default=str)
             
-            logger.info(f"Base de datos exportada: {export_path}")
+            logger.info(f"Base de datos exportada a: {export_path}")
             return True
             
         except Exception as e:
@@ -1960,7 +2020,7 @@ class BiometricDatabase:
                     self.users[user_id] = user_profile
                     self._save_user(user_profile)
                     
-                    logger.info(f"✅ Usuario {user_id} creado: {username}")
+                    logger.info(f"✅ Usuario {user_id} creado automáticament: {username}")
                 
                 if anatomical_features is None:
                     logger.error("Se requieren características anatómicas en Bootstrap")
@@ -1970,6 +2030,9 @@ class BiometricDatabase:
                     logger.error("Características anatómicas deben tener 180 dimensiones")
                     return None
                 
+                # =========================================================================
+                # ✅ PASO 1: CREAR TEMPLATE ANATÓMICO
+                # =========================================================================
                 anatomical_template_id = f"{user_id}_bootstrap_anatomical_{int(time.time())}_{uuid.uuid4().hex[:8]}"
                 
                 anatomical_template = BiometricTemplate(
@@ -1992,22 +2055,100 @@ class BiometricDatabase:
                 anatomical_template.metadata['pending_embedding'] = True
                 anatomical_template.metadata['modality'] = 'anatomical'
                 
+                # =========================================================================
+                # ✅ PASO 2: BUSCAR DATOS TEMPORALES
+                # =========================================================================
+                
                 dynamic_template_id = None
                 temporal_sequence = None
+                data_source_found = None
+                is_real_temporal = False
                 
                 try:
-                    logger.info("🔍 Buscando datos temporales REALES...")
+                    log_info("🔍 BUSCANDO datos temporales REALES desde metadata de muestra...")
                     
+                    # ✅ MÉTODO PRINCIPAL: BUSCAR EN METADATA DE LA MUESTRA ACTUAL
                     if (sample_metadata and 
                         'has_temporal_data' in sample_metadata and 
                         sample_metadata['has_temporal_data'] and
-                        'temporal_sequence' in sample_metadata):
+                        'temporal_sequence' in sample_metadata and
+                        sample_metadata['temporal_sequence'] is not None):
                         
                         temporal_sequence = np.array(sample_metadata['temporal_sequence'], dtype=np.float32)
-                        logger.info(f"✅ Secuencia temporal REAL encontrada: {temporal_sequence.shape}")
+                        data_source_found = sample_metadata.get('data_source', 'real_enrollment_capture')
+                        is_real_temporal = True  # SIEMPRE real si viene de metadata de muestra
+                        
+                        logger.info(f"✅ MÉTODO PRINCIPAL: Secuencia temporal REAL encontrada en metadata: {temporal_sequence.shape}")
+                        logger.info(f"   📊 Fuente: {data_source_found}")
+                        logger.info(f"   📊 Longitud: {sample_metadata.get('sequence_length', len(temporal_sequence))} frames")
                     
+                    # ✅ MÉTODO ALTERNATIVO: BUSCAR EN ENROLLMENT SYSTEM ACTIVO (SOLO SI NO HAY DATOS)
+                    elif temporal_sequence is None:  
+                        try:
+                            logger.info("🔄 MÉTODO ALTERNATIVO: Buscando en sesiones activas...")
+                            # Buscar directamente en este objeto si es el enrollment system
+                            if hasattr(self, 'active_sessions'):
+                                for session_id, session in self.active_sessions.items():
+                                    if (hasattr(session, 'user_id') and session.user_id == user_id and 
+                                        hasattr(session, 'samples') and len(session.samples) > 0):
+                                        
+                                        # Buscar muestras con datos temporales reales
+                                        for sample in reversed(session.samples):  # Más recientes primero
+                                            if (hasattr(sample, 'has_temporal_data') and 
+                                                sample.has_temporal_data and
+                                                hasattr(sample, 'temporal_sequence') and 
+                                                sample.temporal_sequence is not None):
+                                                temporal_sequence = sample.temporal_sequence
+                                                data_source_found = getattr(sample, 'metadata', {}).get('data_source', 'session_sample_real')
+                                                is_real_temporal = True  # SIEMPRE real si viene de muestra de sesión
+                                                
+                                                logger.info(f"✅ MÉTODO ALTERNATIVO: Secuencia temporal REAL desde muestra: {temporal_sequence.shape}")
+                                                logger.info(f"   📊 Sample ID: {sample.sample_id}")
+                                                logger.info(f"   📊 Gesto: {sample.gesture_name}")
+                                                break
+                                        
+                                        if temporal_sequence is not None:
+                                            break
+                        except Exception as e:
+                            logger.info(f"Método alternativo falló: {e}")
+                    
+                    # MÉTODO DE FALLBACK: SOLO SI NO HAY DATOS REALES (ÚLTIMO RECURSO)
+                    elif temporal_sequence is None: 
+                        logger.warning("⚠️ NO se encontraron datos temporales REALES - usando fallback")
+                        try:
+                            # Usar templates anatómicos previos del mismo usuario
+                            user_anatomical_templates = []
+                            for template_id, template in self.templates.items():
+                                if (template.user_id == user_id and 
+                                    template.template_type == TemplateType.ANATOMICAL and
+                                    'bootstrap_features' in template.metadata):
+                                    user_anatomical_templates.append(template.metadata['bootstrap_features'])
+                            
+                            # Incluir características actuales
+                            user_anatomical_templates.append(anatomical_features.tolist())
+                            
+                            if len(user_anatomical_templates) >= 5:
+                                # Crear secuencia temporal desde características anatómicas
+                                temporal_frames = []
+                                for anat_features in user_anatomical_templates[-20:]:  # Max 20
+                                    padded_features = np.zeros(320)
+                                    padded_features[:min(len(anat_features), 320)] = anat_features[:320]
+                                    temporal_frames.append(padded_features)
+                                
+                                temporal_sequence = np.array(temporal_frames, dtype=np.float32)
+                                data_source_found = 'anatomical_templates_fallback'
+                                is_real_temporal = False 
+                                
+                                logger.warning(f"⚠️ FALLBACK: Secuencia creada desde templates anatómicos: {temporal_sequence.shape}")
+                        except Exception as e:
+                            log_error(f"Método fallback falló: {e}")
+                    
+                    # ====== CREAR TEMPLATE DINÁMICO SI HAY SECUENCIA ======
                     if temporal_sequence is not None and len(temporal_sequence) >= 5:
                         dynamic_template_id = f"{user_id}_bootstrap_dynamic_{int(time.time())}_{uuid.uuid4().hex[:8]}"
+                        
+                        # ✅ USAR DATA_SOURCE ENCONTRADO
+                        final_data_source = data_source_found or 'unknown_source'
                         
                         dynamic_template = BiometricTemplate(
                             user_id=user_id,
@@ -2027,25 +2168,50 @@ class BiometricDatabase:
                                 'pending_embedding': True,
                                 'modality': 'dynamic',
                                 'feature_dim': temporal_sequence.shape[1] if len(temporal_sequence.shape) > 1 else 320,
-                                'data_source': 'real_enrollment_capture',
-                                'is_real_temporal': True
+                                'data_source': final_data_source,
+                                'is_real_temporal': is_real_temporal  # ✅ MARCADOR DEFINITIVO
                             }
                         )
                         
+                        # Calcular checksum y guardar template dinámico
                         dynamic_template.checksum = self._calculate_template_checksum(dynamic_template)
                         self.templates[dynamic_template_id] = dynamic_template
+                        
+                        # Guardar template dinámico en disco
                         self._save_template_bootstrap(dynamic_template)
                         
-                        logger.info(f"✅ Template dinámico bootstrap: {dynamic_template_id}")
+                        logger.info(f"✅ Template dinámico bootstrap creado: {dynamic_template_id}")
+                        logger.info(f"   📊 Secuencia temporal: {len(temporal_sequence)} frames x {temporal_sequence.shape[1]} características")
+                        logger.info(f"   📊 Fuente datos: {final_data_source}")
+                        logger.info(f"   📊 Es temporal real: {is_real_temporal}")
+                        logger.info(f"   🎯 100% REAL: {'SÍ ✅' if is_real_temporal else 'NO ❌ (Fallback)'}")
+                        
+                        # También guardar referencia en template anatómico para debugging
                         anatomical_template.metadata['paired_dynamic_template'] = dynamic_template_id
-                    
+                        anatomical_template.metadata['dynamic_data_source'] = final_data_source
+                        anatomical_template.metadata['is_100_percent_real'] = is_real_temporal
+                    else:
+                        logger.warning("⚠️ No se pudo obtener secuencia temporal suficiente - solo template anatómico")
+                        anatomical_template.metadata['has_temporal_data'] = False
+                        
                 except Exception as e:
-                    logger.error(f"❌ Error datos temporales: {e}")
+                    log_error(f"❌ Error en extracción de datos temporales: {e}")
+                    import traceback
+                    log_error(f"Traceback: {traceback.format_exc()}")
                     anatomical_template.metadata['has_temporal_data'] = False
+                    dynamic_template_id = None
+                
+                # =========================================================================
+                # ✅ PASO 3: GUARDAR TEMPLATE ANATÓMICO
+                # =========================================================================
                 
                 anatomical_template.checksum = self._calculate_template_checksum(anatomical_template)
                 self.templates[anatomical_template_id] = anatomical_template
                 self._save_template_bootstrap(anatomical_template)
+                
+                # =========================================================================
+                # ✅ PASO 4: ACTUALIZAR PERFIL DE USUARIO CON AMBOS TEMPLATES
+                # =========================================================================
                 
                 user_profile = self.users[user_id]
                 
@@ -2063,9 +2229,13 @@ class BiometricDatabase:
                 
                 if gesture_name not in user_profile.gesture_sequence:
                     user_profile.gesture_sequence.append(gesture_name)
-                    logger.info(f"➕ Gesto '{gesture_name}' agregado")
+                    logger.info(f"➕ Agregado gesto '{gesture_name}' a secuencia del usuario {user_id}")
                 
                 self._save_user(user_profile)
+                
+                # =========================================================================
+                # ✅ PASO 5: ACTUALIZAR ESTADÍSTICAS
+                # =========================================================================
                 
                 self.stats.total_templates += templates_created
                 self.stats.anatomical_templates += 1
@@ -2084,11 +2254,27 @@ class BiometricDatabase:
                 self._update_stats()
                 
                 logger.info(f"🎯 BOOTSTRAP COMPLETO:")
-                logger.info(f"   📊 Templates: {templates_created}")
+                logger.info(f"   📊 Templates creados: {templates_created}")
                 logger.info(f"   🧬 Anatómico: {anatomical_template_id}")
                 if dynamic_template_id:
                     logger.info(f"   ⏱️ Dinámico: {dynamic_template_id}")
                 
+                     # ✅ VERIFICACIÓN FINAL ROBUSTA
+                    dynamic_template = self.templates.get(dynamic_template_id)
+                    if dynamic_template and 'is_real_temporal' in dynamic_template.metadata:
+                        is_real_final = dynamic_template.metadata['is_real_temporal']
+                        data_source_final = dynamic_template.metadata.get('data_source', 'unknown')
+                        
+                        logger.info(f"   📊 Fuente de datos: {data_source_final}")
+                        logger.info(f"   📊 Datos temporales: {'🎯 100% REALES ✅' if is_real_final else '❌ Fallback desde anatómicos (SINTÉTICOS)'}")
+                        logger.info(f"   🔍 Verificación final: is_real_temporal = {is_real_final}")
+                    else:
+                        logger.warning(f"   ⚠️ No se pudo verificar estado de datos temporales en template dinámico")
+                else:
+                    logger.info(f"   ⚠️ Sin template dinámico (no se encontraron datos temporales)")
+                
+                logger.info(f"   🎯 Gesto: {gesture_name}")
+                logger.info(f"   📈 Total enrollments: {user_profile.total_enrollments}")
                 return anatomical_template_id
                 
         except Exception as e:
@@ -2103,10 +2289,14 @@ class BiometricDatabase:
             template_file = self.db_path / 'templates' / f'{template.template_id}.json'
             
             print(f"🔍 DEBUG: Guardando Bootstrap {template.template_id}")
+            print(f"🔍 DEBUG: Ruta archivo: {template_file}")
+            print(f"🔍 DEBUG: Directorio existe: {template_file.parent.exists()}")
             
             template_data = asdict(template)
             template_data['anatomical_embedding'] = None
             template_data['dynamic_embedding'] = None
+            
+            print(f"🔍 DEBUG: Datos convertidos, gesto: {template_data.get('gesture_name', 'N/A')}")
             
             with open(template_file, 'w', encoding='utf-8') as f:
                 json.dump(template_data, f, indent=2, default=str)
@@ -2172,7 +2362,7 @@ class BiometricDatabase:
                 
                 self._update_stats()
                 
-                logger.info(f"✅ Convertidos {converted_count}/{len(bootstrap_templates)} templates")
+                logger.info(f"✅ Convertidos {converted_count}/{len(bootstrap_templates)} templates Bootstrap")
                 
                 return converted_count
                 
@@ -2231,24 +2421,3 @@ def get_biometric_database(db_path: Optional[str] = None) -> BiometricDatabase:
     
     return _biometric_db_instance
 
-
-# ===== TESTING =====
-if __name__ == "__main__":
-    print("=== TESTING MÓDULO 13: BIOMETRIC_DATABASE ===")
-    
-    try:
-        db = BiometricDatabase()
-        print("✓ BiometricDatabase inicializada")
-        
-        print(f"✓ Usuarios: {len(db.users)}")
-        print(f"✓ Templates: {len(db.templates)}")
-        print(f"✓ Índice anatómico: {len(db.anatomical_index.embeddings)}")
-        print(f"✓ Índice dinámico: {len(db.dynamic_index.embeddings)}")
-        
-        summary = db.get_summary()
-        print(f"✓ Resumen: {summary}")
-        
-    except Exception as e:
-        print(f"✗ Error: {e}")
-    
-    print("=== FIN TESTING MÓDULO 13 ===")

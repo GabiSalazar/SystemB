@@ -19,7 +19,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -145,6 +145,8 @@ class RealDynamicFeaturesExtractor:
     def __init__(self, sequence_length: int = 50):
         """Inicializa el extractor de características dinámicas REAL."""
         
+        self.logger = get_logger()
+        
         # Configuración
         self.sequence_length = sequence_length
         self.dynamic_config = self._load_dynamic_config()
@@ -237,7 +239,7 @@ class RealDynamicFeaturesExtractor:
             self.frame_counter += 1
             self.frames_processed += 1
             
-            # Detectar transiciones REALES
+            # Detectar transiciones
             transition_detected = self._detect_real_transition(gesture_name, confidence)
             
             if transition_detected:
@@ -267,7 +269,7 @@ class RealDynamicFeaturesExtractor:
             return np.zeros((21, 3), dtype=np.float32)
     
     def _extract_2d_positions_real(self, landmarks) -> np.ndarray:
-        """Extrae posiciones 2D REALES y estima Z."""
+        """Extrae posiciones 2D y estima Z."""
         try:
             positions = np.zeros((21, 3), dtype=np.float32)
             
@@ -394,7 +396,7 @@ class RealDynamicFeaturesExtractor:
             logger.error(f"Error iniciando transición real: {e}")
     
     def _finalize_real_transition(self, end_gesture: str):
-        """Finaliza una transición REAL y extrae características."""
+        """Finaliza una transición y extrae características."""
         try:
             if not self.transition_active:
                 return
@@ -567,14 +569,14 @@ class RealDynamicFeaturesExtractor:
             
             if self._validate_real_feature_quality(feature_vector):
                 self.successful_extractions += 1
-                logger.info(f"Características dinámicas REALES extraídas: {feature_vector.dimension} dim")
+                logger.info(f"Características dinámicas extraídas: {feature_vector.dimension} dim")
                 return feature_vector
             else:
-                logger.error("Vector dinámico REAL no cumple criterios de calidad")
+                logger.error("Vector dinámico no cumple criterios de calidad")
                 return None
                 
         except Exception as e:
-            logger.error(f"Error extrayendo características de transición REALES: {e}")
+            logger.error(f"Error extrayendo características de transición: {e}")
             return None
     
     def _extract_real_velocity_profile(self, frames: List[TemporalFrame]) -> VelocityProfile:
@@ -663,7 +665,7 @@ class RealDynamicFeaturesExtractor:
             return np.zeros(50, dtype=np.float32)
     
     def _calculate_real_velocity_timing(self, velocity_magnitudes: np.ndarray) -> np.ndarray:
-        """Calcula características temporales de velocidad REALES (20 dim)."""
+        """Calcula características temporales de velocidad (20 dim)."""
         try:
             features = []
             
@@ -752,7 +754,7 @@ class RealDynamicFeaturesExtractor:
             )
             
         except Exception as e:
-            logger.error(f"Error extrayendo perfil de aceleración REAL: {e}")
+            logger.error(f"Error extrayendo perfil de aceleración: {e}")
             return AccelerationProfile(
                 landmark_accelerations=np.zeros((21, 1, 3)),
                 peak_accelerations=np.zeros(21),
@@ -762,7 +764,7 @@ class RealDynamicFeaturesExtractor:
             )
     
     def _calculate_real_jerk_patterns(self, landmark_accelerations: np.ndarray) -> np.ndarray:
-        """Calcula patrones de jerk REALES (30 dim)."""
+        """Calcula patrones de jerk (30 dim)."""
         try:
             features = []
             
@@ -795,11 +797,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:30], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error calculando patrones de jerk REALES: {e}")
+            logger.error(f"Error calculando patrones de jerk: {e}")
             return np.zeros(30, dtype=np.float32)
     
     def _calculate_real_smoothness_metrics(self, acceleration_magnitudes: np.ndarray) -> np.ndarray:
-        """Calcula métricas de suavidad REALES (15 dim)."""
+        """Calcula métricas de suavidad (15 dim)."""
         try:
             features = []
             
@@ -845,12 +847,12 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:15], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error calculando métricas de suavidad REALES: {e}")
+            logger.error(f"Error calculando métricas de suavidad: {e}")
             return np.zeros(15, dtype=np.float32)
         
     
     def _extract_real_trajectory_profile(self, frames: List[TemporalFrame]) -> TrajectoryProfile:
-        """Extrae perfil de trayectoria REAL de la secuencia."""
+        """Extrae perfil de trayectoria de la secuencia."""
         try:
             positions_sequence = []
             
@@ -894,7 +896,7 @@ class RealDynamicFeaturesExtractor:
             )
     
     def _calculate_real_trajectory_lengths(self, landmark_trajectories: np.ndarray) -> np.ndarray:
-        """Calcula longitudes de trayectoria REALES."""
+        """Calcula longitudes de trayectoria."""
         try:
             lengths = np.zeros(landmark_trajectories.shape[0])
             
@@ -912,7 +914,7 @@ class RealDynamicFeaturesExtractor:
             return np.zeros(21)
     
     def _calculate_real_curvature_profiles(self, landmark_trajectories: np.ndarray) -> np.ndarray:
-        """Calcula perfiles de curvatura REALES."""
+        """Calcula perfiles de curvatura."""
         try:
             curvatures = np.zeros(landmark_trajectories.shape[0])
             
@@ -950,7 +952,7 @@ class RealDynamicFeaturesExtractor:
             return np.zeros(21)
     
     def _calculate_real_direction_changes(self, landmark_trajectories: np.ndarray) -> np.ndarray:
-        """Calcula cambios de dirección REALES."""
+        """Calcula cambios de dirección."""
         try:
             direction_changes = np.zeros(landmark_trajectories.shape[0])
             
@@ -984,7 +986,7 @@ class RealDynamicFeaturesExtractor:
             return np.zeros(21)
     
     def _calculate_real_spatial_efficiency(self, landmark_trajectories: np.ndarray) -> np.ndarray:
-        """Calcula eficiencia espacial REAL."""
+        """Calcula eficiencia espacial."""
         try:
             efficiency = np.zeros(landmark_trajectories.shape[0])
             
@@ -1007,7 +1009,7 @@ class RealDynamicFeaturesExtractor:
             return np.zeros(21)
     
     def _extract_real_velocity_features(self, velocity_profile: VelocityProfile) -> np.ndarray:
-        """Extrae características de velocidad REALES (70 dim)."""
+        """Extrae características de velocidad (70 dim)."""
         try:
             features = []
             
@@ -1023,11 +1025,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:70], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error extrayendo características de velocidad REALES: {e}")
+            logger.error(f"Error extrayendo características de velocidad: {e}")
             return np.zeros(70, dtype=np.float32)
     
     def _extract_real_acceleration_features(self, acceleration_profile: AccelerationProfile) -> np.ndarray:
-        """Extrae características de aceleración REALES (65 dim)."""
+        """Extrae características de aceleración (65 dim)."""
         try:
             features = []
             
@@ -1043,11 +1045,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:65], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error extrayendo características de aceleración REALES: {e}")
+            logger.error(f"Error extrayendo características de aceleración: {e}")
             return np.zeros(65, dtype=np.float32)
     
     def _extract_real_trajectory_features(self, trajectory_profile: TrajectoryProfile) -> np.ndarray:
-        """Extrae características de trayectoria REALES (85 dim)."""
+        """Extrae características de trayectoria (85 dim)."""
         try:
             features = []
             
@@ -1062,11 +1064,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:85], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error extrayendo características de trayectoria REALES: {e}")
+            logger.error(f"Error extrayendo características de trayectoria: {e}")
             return np.zeros(85, dtype=np.float32)
     
     def _extract_real_timing_features(self, frames: List[TemporalFrame]) -> np.ndarray:
-        """Extrae características temporales REALES (40 dim)."""
+        """Extrae características temporales (40 dim)."""
         try:
             features = []
             
@@ -1152,11 +1154,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:40], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error extrayendo características temporales REALES: {e}")
+            logger.error(f"Error extrayendo características temporales: {e}")
             return np.zeros(40, dtype=np.float32)
     
     def _extract_real_rhythm_features(self, frames: List[TemporalFrame]) -> np.ndarray:
-        """Extrae características de ritmo REALES (35 dim)."""
+        """Extrae características de ritmo (35 dim)."""
         try:
             features = []
             
@@ -1256,11 +1258,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:35], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error extrayendo características de ritmo REALES: {e}")
+            logger.error(f"Error extrayendo características de ritmo: {e}")
             return np.zeros(35, dtype=np.float32)
         
     def _extract_real_transition_characteristics(self, frames: List[TemporalFrame]) -> np.ndarray:
-        """Extrae características de transición REALES (25 dim)."""
+        """Extrae características de transición (25 dim)."""
         try:
             features = []
             
@@ -1365,11 +1367,11 @@ class RealDynamicFeaturesExtractor:
             return np.array(features[:25], dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"Error extrayendo características de transición REALES: {e}")
+            logger.error(f"Error extrayendo características de transición: {e}")
             return np.zeros(25, dtype=np.float32)
     
     def _normalize_real_features(self, feature_vector: DynamicFeatureVector) -> DynamicFeatureVector:
-        """Normaliza el vector de características dinámicas REALES."""
+        """Normaliza el vector de características dinámicas."""
         try:
             def robust_normalize_real(arr):
                 """Normalización robusta REAL usando mediana y MAD."""
@@ -1401,11 +1403,11 @@ class RealDynamicFeaturesExtractor:
             )
             
         except Exception as e:
-            logger.error(f"Error normalizando características dinámicas REALES: {e}")
+            logger.error(f"Error normalizando características dinámicas: {e}")
             return feature_vector
     
     def _validate_real_feature_quality(self, feature_vector: DynamicFeatureVector) -> bool:
-        """Valida calidad del vector de características dinámicas REALES."""
+        """Valida calidad del vector de características dinámicas."""
         try:
             complete_vector = feature_vector.complete_vector
             
@@ -1432,15 +1434,15 @@ class RealDynamicFeaturesExtractor:
                 logger.error("Rangos de características demasiado pequeños para ser reales")
                 return False
             
-            logger.info("Vector de características dinámicas REALES validado exitosamente")
+            logger.info("Vector de características dinámicas validado exitosamente")
             return True
             
         except Exception as e:
-            logger.error(f"Error validando calidad de características dinámicas REALES: {e}")
+            logger.error(f"Error validando calidad de características dinámicas: {e}")
             return False
     
     def get_last_transition_real(self) -> Optional[TransitionEvent]:
-        """Obtiene la última transición REAL detectada."""
+        """Obtiene la última transición detectada."""
         if self.detected_transitions:
             return self.detected_transitions[-1]
         return None
@@ -1498,7 +1500,7 @@ class RealDynamicFeaturesExtractor:
                 return self.extract_transition_features_real(artificial_transition)
                 
         except Exception as e:
-            logger.error(f"Error extrayendo características de secuencia REAL: {e}")
+            logger.error(f"Error extrayendo características de secuencia: {e}")
             return None
     
     def get_extraction_stats_real(self) -> Dict[str, Any]:
@@ -1517,11 +1519,11 @@ class RealDynamicFeaturesExtractor:
             'buffer_size': len(self.temporal_buffer),
             'detected_transitions_count': len(self.detected_transitions),
             'extractor_type': 'REAL - Sin simulación',
-            'version': '2.0 - 100% Real'
+            'version': '2.0'
         }
     
     def reset_state(self):
-        """Reinicia el estado del extractor REAL."""
+        """Reinicia el estado del extractor."""
         self.temporal_buffer.clear()
         self.previous_frame = None
         self.current_gesture = "None"
@@ -1530,14 +1532,14 @@ class RealDynamicFeaturesExtractor:
         self.transition_start_frame = 0
         self.frame_counter = 0
         self.detected_transitions.clear()
-        logger.info("Estado del extractor dinámico REAL reiniciado")
+        logger.info("Estado del extractor dinámico reiniciado")
     
     def reset_stats(self):
-        """Reinicia estadísticas REALES."""
+        """Reinicia estadísticas."""
         self.frames_processed = 0
         self.transitions_detected = 0
         self.successful_extractions = 0
-        logger.info("Estadísticas de extracción dinámica REALES reiniciadas")
+        logger.info("Estadísticas de extracción dinámica reiniciadas")
 
 
 # ===== INSTANCIA GLOBAL =====

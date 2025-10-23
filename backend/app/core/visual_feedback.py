@@ -11,9 +11,11 @@ from enum import Enum
 import time
 import logging
 
-# Logger
-logger = logging.getLogger(__name__)
+from app.core.config_manager import get_logger
 
+# Logger
+#logger = logging.getLogger(__name__)
+logger = get_logger() or logging.getLogger(__name__)
 
 class FeedbackLevel(Enum):
     """Niveles de feedback visual con colores específicos."""
@@ -159,9 +161,6 @@ class VisualFeedbackManager:
         except Exception as e:
             logger.error(f"ERROR generando feedback: {e}", exc_info=True)
             return [FeedbackMessage("Error en feedback visual", FeedbackLevel.ERROR, 1, "❌")]
-    
-    # ... (resto de los métodos igual - _get_roi_feedback, _get_distance_feedback, etc.)
-    # Mantén todo lo demás igual, solo cambiamos el logger
     
     def _get_roi_feedback(self, roi_result) -> Optional[FeedbackMessage]:
         """Genera feedback específico del ROI normalization."""

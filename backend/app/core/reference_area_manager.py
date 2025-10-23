@@ -18,7 +18,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -79,6 +79,7 @@ class ReferenceAreaManager:
 
     def __init__(self):
         """Inicializa el gestor de áreas de referencia."""
+        self.logger = get_logger()
         # Cargar configuraciones
         self.area_config = self._load_area_config()
         self.color_config = self._load_color_config()
@@ -113,9 +114,7 @@ class ReferenceAreaManager:
             "Thumb_Up": {"width_ratio": 0.4, "height_ratio": 0.7, "center_y_offset": 0.5},
             "Thumb_Down": {"width_ratio": 0.4, "height_ratio": 0.7, "center_y_offset": 0.5},
             "ILoveYou": {"width_ratio": 0.5, "height_ratio": 0.75, "center_y_offset": 0.5},
-            "default": {"width_ratio": 0.45, "height_ratio": 0.6, "center_y_offset": 0.5},
-            "corner_size": 20,
-            "line_thickness": 3
+            "default": {"width_ratio": 0.45, "height_ratio": 0.6, "center_y_offset": 0.5}
         }
         
         return get_config('reference_area.gesture_areas', default_areas)

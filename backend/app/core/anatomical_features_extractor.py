@@ -18,7 +18,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -100,6 +100,7 @@ class AnatomicalFeaturesExtractor:
     
     def __init__(self):
         """Inicializa el extractor de características."""
+        self.logger = get_logger()
         # Cargar configuración
         self.feature_config = self._load_feature_config()
         
@@ -452,7 +453,7 @@ class AnatomicalFeaturesExtractor:
     
     def _calculate_finger_metrics(self, landmarks, finger_indices: List[int], 
                              finger_name: str) -> FingerMetrics:
-        """Calcula métricas detalladas de un dedo específico - SOLO VALORES REALES CALCULADOS."""
+        """Calcula métricas detalladas de un dedo específico"""
         try:
             if landmarks is None or not hasattr(landmarks, 'landmark'):
                 raise ValueError(f"No hay landmarks válidos para calcular métricas de {finger_name}")
@@ -533,7 +534,7 @@ class AnatomicalFeaturesExtractor:
             )
             
         except Exception as e:
-            logger.error(f"IMPOSIBLE calcular métricas reales para dedo {finger_name}: {e}")
+            logger.error(f"IMPOSIBLE calcular métricas para dedo {finger_name}: {e}")
             return FingerMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     
     def _calculate_finger_curvature(self, finger_points: List) -> float:
@@ -651,7 +652,7 @@ class AnatomicalFeaturesExtractor:
             return 0.0
     
     def _extract_palm_features(self, landmarks, landmarks_2d) -> np.ndarray:
-        """Extrae características REALES de la palma - USANDO FUNCIONES ORIGINALES."""
+        """Extrae características de la palma."""
         try:
             if landmarks is None or not hasattr(landmarks, 'landmark'):
                 raise ValueError("No hay landmarks para calcular características de palma")
@@ -708,7 +709,7 @@ class AnatomicalFeaturesExtractor:
             return np.array(features, dtype=np.float32)
             
         except Exception as e:
-            logger.error(f"IMPOSIBLE extraer características reales de palma: {e}")
+            logger.error(f"IMPOSIBLE extraer características de palma: {e}")
             return np.zeros(20, dtype=np.float32)
     
     def _calculate_palm_metrics(self, palm_points: List) -> PalmMetrics:
@@ -901,32 +902,53 @@ class AnatomicalFeaturesExtractor:
         try:
             features = []
             
+            # Distancias clave normalizadas
             key_distances = [
-                (0, 4), (0, 8), (0, 12), (0, 16), (0, 20),
-                (4, 8), (8, 12), (12, 16), (16, 20), (4, 20),
-                (1, 5), (5, 9), (9, 13), (13, 17),
-                (2, 6), (6, 10), (10, 14), (14, 18),
-                (3, 7), (7, 11), (11, 15), (15, 19),
+                (0, 4),   # muñeca-pulgar
+                (0, 8),   # muñeca-índice
+                (0, 12),  # muñeca-medio
+                (0, 16),  # muñeca-anular
+                (0, 20),  # muñeca-meñique
+                (4, 8),   # pulgar-índice
+                (8, 12),  # índice-medio
+                (12, 16), # medio-anular
+                (16, 20), # anular-meñique
+                (4, 20),  # pulgar-meñique (span máximo)
+                (1, 5),   # bases pulgar-índice
+                (5, 9),   # bases índice-medio
+                (9, 13),  # bases medio-anular
+                (13, 17), # bases anular-meñique
+                (2, 6),   # articulaciones proximales
+                (6, 10),
+                (10, 14),
+                (14, 18),
+                (3, 7),   # articulaciones medias
+                (7, 11),
+                (11, 15),
+                (15, 19),
             ]
             
             for p1, p2 in key_distances:
                 distance = self._distance_normalized(landmarks, p1, p2)
                 features.append(distance)
-            
+
+            # Distancias adicionales hasta completar 35
             additional_distances = [
-                self._distance_normalized(landmarks, 0, 1),
-                self._distance_normalized(landmarks, 0, 5),
-                self._distance_normalized(landmarks, 0, 9),
-                self._distance_normalized(landmarks, 0, 13),
-                self._distance_normalized(landmarks, 0, 17),
-                self._distance_normalized(landmarks, 4, 12),
-                self._distance_normalized(landmarks, 4, 16),
-                self._distance_normalized(landmarks, 8, 16),
-                self._distance_normalized(landmarks, 8, 20),
-                self._distance_normalized(landmarks, 12, 20),
-                abs(landmarks.landmark[4].z - landmarks.landmark[0].z),
-                abs(landmarks.landmark[8].z - landmarks.landmark[0].z),
-                abs(landmarks.landmark[12].z - landmarks.landmark[0].z),
+                self._distance_normalized(landmarks, 0, 1),   # muñeca-base pulgar
+                self._distance_normalized(landmarks, 0, 5),   # muñeca-base índice
+                self._distance_normalized(landmarks, 0, 9),   # muñeca-base medio
+                self._distance_normalized(landmarks, 0, 13),  # muñeca-base anular
+                self._distance_normalized(landmarks, 0, 17),  # muñeca-base meñique
+                # Diagonales
+                self._distance_normalized(landmarks, 4, 12),  # pulgar-medio
+                self._distance_normalized(landmarks, 4, 16),  # pulgar-anular
+                self._distance_normalized(landmarks, 8, 16),  # índice-anular
+                self._distance_normalized(landmarks, 8, 20),  # índice-meñique
+                self._distance_normalized(landmarks, 12, 20), # medio-meñique
+                # Profundidades relativas
+                abs(landmarks.landmark[4].z - landmarks.landmark[0].z),   # pulgar depth
+                abs(landmarks.landmark[8].z - landmarks.landmark[0].z),   # índice depth
+                abs(landmarks.landmark[12].z - landmarks.landmark[0].z),  # medio depth
             ]
             
             features.extend(additional_distances)
@@ -996,7 +1018,7 @@ class AnatomicalFeaturesExtractor:
             return 0.0
     
     def _calculate_finger_joint_angles(self, landmarks, finger_indices: List[int]) -> List[float]:
-        """Calcula ángulos REALES de articulaciones usando geometría de puntos."""
+        """Calcula ángulos de articulaciones usando geometría de puntos."""
         try:
             if landmarks is None or not hasattr(landmarks, 'landmark'):
                 raise ValueError("No hay landmarks para calcular ángulos de articulaciones")
@@ -1051,7 +1073,7 @@ class AnatomicalFeaturesExtractor:
             return angles[:3]
             
         except Exception as e:
-            logger.error(f"IMPOSIBLE calcular ángulos reales de articulaciones: {e}")
+            logger.error(f"IMPOSIBLE calcular ángulos de articulaciones: {e}")
             return [0.0, 0.0, 0.0]
     
     def _calculate_inter_finger_angle(self, landmarks, finger1: str, finger2: str) -> float:
@@ -1081,9 +1103,14 @@ class AnatomicalFeaturesExtractor:
         try:
             angles = []
             
+            # Ángulos entre líneas de la palma
             palm_lines = [
-                (0, 5, 9), (0, 9, 13), (0, 13, 17),
-                (5, 0, 17), (1, 0, 5), (1, 0, 17),
+                (0, 5, 9),    # muñeca-índice-medio
+                (0, 9, 13),   # muñeca-medio-anular  
+                (0, 13, 17),  # muñeca-anular-meñique
+                (5, 0, 17),   # índice-muñeca-meñique
+                (1, 0, 5),    # pulgar-muñeca-índice
+                (1, 0, 17),   # pulgar-muñeca-meñique
             ]
             
             for p1_idx, vertex_idx, p2_idx in palm_lines:

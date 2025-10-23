@@ -33,7 +33,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -109,7 +109,7 @@ class RealPreprocessingConfig:
 
 @dataclass
 class RealDataQualityMetrics:
-    """Métricas de calidad para datos REALES."""
+    """Métricas de calidad para datos."""
     total_samples: int
     total_users: int
     samples_per_user: Dict[str, int]
@@ -137,7 +137,7 @@ class RealBiometricSample:
 
 @dataclass
 class RealDynamicSample:
-    """Muestra temporal REAL para entrenamiento de red dinámica."""
+    """Muestra temporal para entrenamiento de red dinámica."""
     user_id: str
     sequence_id: str
     temporal_features: np.ndarray
@@ -151,7 +151,7 @@ class RealDynamicSample:
 
 @dataclass
 class RealProcessedDataset:
-    """Dataset procesado con datos REALES únicamente."""
+    """Dataset procesado con datos únicamente."""
     anatomical_features: np.ndarray
     anatomical_labels: np.ndarray
     anatomical_users: np.ndarray
@@ -175,19 +175,21 @@ class RealFeaturePreprocessor:
     """
     
     def __init__(self):
-        """Inicializa el preprocesador de características REAL."""
+        """Inicializa el preprocesador de características."""
+        
+        self.logger = get_logger()
         
         if not SKLEARN_AVAILABLE:
             raise ImportError("Scikit-learn no disponible")
         
-        # Configuración REAL
+        # Configuración
         self.config = self._load_real_preprocessing_config()
         
-        # Extractores de características REALES
+        # Extractores de características
         self.anatomical_extractor = self._get_real_anatomical_extractor()
         self.dynamic_extractor = self._get_real_dynamic_extractor()
         
-        # Pipelines de transformación REALES
+        # Pipelines de transformación
         self.anatomical_pipeline = None
         self.dynamic_pipeline = None
         
@@ -202,10 +204,10 @@ class RealFeaturePreprocessor:
         # Estadísticas REALES
         self.preprocessing_stats = {}
         
-        logger.info("RealFeaturePreprocessor inicializado - 100% SIN SIMULACIÓN")
+        logger.info("RealFeaturePreprocessor inicializado")
     
     def _get_real_anatomical_extractor(self):
-        """Obtiene extractor anatómico real."""
+        """Obtiene extractor anatómico."""
         try:
             from app.core.anatomical_features_extractor import get_anatomical_features_extractor
             return get_anatomical_features_extractor()
@@ -214,7 +216,7 @@ class RealFeaturePreprocessor:
             return None
     
     def _get_real_dynamic_extractor(self):
-        """Obtiene extractor dinámico real."""
+        """Obtiene extractor dinámico."""
         try:
             from app.core.dynamic_features_extractor import get_dynamic_features_extractor
             return get_dynamic_features_extractor()
@@ -223,7 +225,7 @@ class RealFeaturePreprocessor:
             return None
     
     def _load_real_preprocessing_config(self) -> RealPreprocessingConfig:
-        """Carga configuración REAL de preprocesamiento."""
+        """Carga configuración de preprocesamiento."""
         try:
             default_config = {
                 'anatomical_normalization': 'robust',
@@ -270,7 +272,7 @@ class RealFeaturePreprocessor:
                 feature_selection=config_dict['feature_selection']
             )
             
-            logger.info("Configuración REAL de preprocesamiento cargada")
+            logger.info("Configuración de preprocesamiento cargada")
             return config
             
         except Exception as e:
@@ -278,9 +280,9 @@ class RealFeaturePreprocessor:
             return RealPreprocessingConfig()
     
     def create_real_anatomical_pipeline(self) -> Pipeline:
-        """Crea pipeline de preprocesamiento para características anatómicas REALES."""
+        """Crea pipeline de preprocesamiento para características anatómicas."""
         try:
-            logger.info("Creando pipeline anatómico REAL...")
+            logger.info("Creando pipeline anatómico...")
             
             steps = []
             
@@ -314,7 +316,7 @@ class RealFeaturePreprocessor:
     def create_real_dynamic_pipeline(self) -> Pipeline:
         """Crea pipeline de preprocesamiento para secuencias dinámicas REALES."""
         try:
-            logger.info("Creando pipeline dinámico REAL...")
+            logger.info("Creando pipeline dinámico...")
             
             steps = []
             
@@ -365,7 +367,104 @@ class RealFeaturePreprocessor:
             return RealTemporalMinMaxScaler()
         else:
             raise ValueError(f"Método temporal no soportado: {method}")
+    
+    def create_real_biometric_samples_from_features(self, 
+                                               anatomical_features: List,
+                                               dynamic_features: List,
+                                               user_ids: List[str],
+                                               gesture_names: List[str],
+                                               additional_metadata: Optional[List[Dict]] = None) -> Tuple[List[RealBiometricSample], List[RealDynamicSample]]:
+        """
+        Convierte vectores de características REALES en muestras biométricas.
         
+        Args:
+            anatomical_features: Lista de vectores anatómicos REALES
+            dynamic_features: Lista de vectores dinámicos REALES  
+            user_ids: IDs de usuarios REALES correspondientes
+            gesture_names: Nombres de gestos REALES
+            additional_metadata: Metadata adicional REAL (opcional)
+            
+        Returns:
+            Tupla (muestras_anatómicas_reales, muestras_dinámicas_reales)
+        """
+        try:
+            logger.info("Creando muestras biométricas REALES desde características...")
+            
+            if len(anatomical_features) != len(dynamic_features):
+                raise ValueError("Número de características anatómicas y dinámicas debe coincidir")
+            
+            if len(user_ids) != len(anatomical_features):
+                raise ValueError("Número de user_ids debe coincidir con características")
+            
+            anatomical_samples = []
+            dynamic_samples = []
+            
+            for i, (anat_feat, dyn_feat, user_id, gesture) in enumerate(
+                zip(anatomical_features, dynamic_features, user_ids, gesture_names)
+            ):
+                # Metadata adicional REAL
+                metadata = additional_metadata[i] if additional_metadata else {}
+                
+                # Extraer características REALES
+                if hasattr(anat_feat, 'complete_vector'):
+                    anat_vector = anat_feat.complete_vector
+                else:
+                    anat_vector = np.array(anat_feat)
+                
+                if hasattr(dyn_feat, 'complete_vector'):
+                    dyn_vector = dyn_feat.complete_vector
+                else:
+                    dyn_vector = np.array(dyn_feat)
+                
+                # Muestra anatómica REAL
+                anat_sample = RealBiometricSample(
+                    user_id=user_id,
+                    sample_id=f"{user_id}_{gesture}_{i}_{int(time.time())}",
+                    features=anat_vector,
+                    gesture_name=gesture,
+                    confidence=metadata.get('confidence', 1.0),
+                    timestamp=time.time(),
+                    hand_side=metadata.get('hand_side', 'unknown'),
+                    quality_score=metadata.get('quality_score', 1.0),
+                    metadata=metadata
+                )
+                anatomical_samples.append(anat_sample)
+                
+                # Muestra dinámica REAL
+                # Si es secuencia temporal, mantener forma; si es vector, convertir a secuencia
+                if dyn_vector.ndim == 1:
+                    sequence = dyn_vector.reshape(1, -1)  # Convertir vector a secuencia mínima
+                    seq_length = 1
+                else:
+                    sequence = dyn_vector
+                    seq_length = dyn_vector.shape[0]
+                
+                dyn_sample = RealDynamicSample(
+                    user_id=user_id,
+                    sample_id=f"{user_id}_{gesture}_seq_{i}_{int(time.time())}",
+                    sequence=sequence,
+                    transition_type=metadata.get('transition_type', f"{gesture}->Next"),
+                    start_gesture=gesture,
+                    end_gesture=metadata.get('end_gesture', 'Unknown'),
+                    sequence_length=seq_length,
+                    duration=metadata.get('duration', 1.0),
+                    quality_score=metadata.get('quality_score', 1.0),
+                    metadata=metadata
+                )
+                dynamic_samples.append(dyn_sample)
+            
+            unique_users = len(set(user_ids))
+            logger.info(f"Creadas {len(anatomical_samples)} muestras biométricas REALES de {unique_users} usuarios")
+            logger.info(f"  - Anatomical samples: {len(anatomical_samples)}")
+            logger.info(f"  - Dynamic samples: {len(dynamic_samples)}")
+            
+            return anatomical_samples, dynamic_samples
+            
+        except Exception as e:
+            logger.error("Error creando muestras biométricas REALES", e)
+            raise
+
+
     def analyze_real_data_quality(self, anatomical_samples: List[RealBiometricSample], 
                                  dynamic_samples: List[RealDynamicSample]) -> RealDataQualityMetrics:
         """Analiza la calidad de datos REALES."""
@@ -399,7 +498,8 @@ class RealFeaturePreprocessor:
             # Detectar outliers
             if anatomical_samples:
                 anatomical_features = np.array([sample.features for sample in anatomical_samples])
-                
+                quality_scores = np.array([sample.quality_score for sample in anatomical_samples])
+
                 z_scores = np.abs((anatomical_features - np.mean(anatomical_features, axis=0)) / (np.std(anatomical_features, axis=0) + 1e-8))
                 outlier_mask = np.any(z_scores > self.config.outlier_threshold, axis=1)
                 outlier_percentage = np.mean(outlier_mask) * 100
@@ -523,18 +623,127 @@ class RealFeaturePreprocessor:
             
             # Datos faltantes
             if missing_data_percentage > 5:
-                recommendations.append(f"Datos faltantes: {missing_data_percentage:.1f}%")
+                recommendations.append(f"Datos faltantes detectados: {missing_data_percentage:.1f}%")
             
         except Exception:
             recommendations.append("Error generando recomendaciones")
         
         return recommendations
     
+    def fit_real_data(self, anatomical_samples: List[RealBiometricSample], 
+                 dynamic_samples: List[RealDynamicSample]) -> bool:
+        """
+        Ajusta el preprocesador.
+        
+        Args:
+            anatomical_samples: Muestras anatómicas 
+            dynamic_samples: Muestras dinámicas 
+            
+        Returns:
+            True si el ajuste fue exitoso
+        """
+        try:
+            logger.info("=== AJUSTANDO PREPROCESADOR CON DATOS  ===")
+            
+            # 1. Análisis de calidad de datos 
+            logger.info("Analizando calidad de datos...")
+            quality_metrics = self.analyze_real_data_quality(anatomical_samples, dynamic_samples)
+            
+            # 2. Crear pipelines 
+            logger.info("Creando pipelines de transformación...")
+            self.anatomical_pipeline = self.create_real_anatomical_pipeline()
+            self.dynamic_pipeline = self.create_real_dynamic_pipeline()
+            
+            # 3. Extraer características y metadatos 
+            logger.info("Extrayendo características...")
+            anatomical_features = np.array([sample.features for sample in anatomical_samples])
+            anatomical_labels = np.array([sample.gesture_name for sample in anatomical_samples])
+            anatomical_users = np.array([sample.user_id for sample in anatomical_samples])
+            
+            # Para secuencias dinámicas, aplanar temporalmente para pipeline
+            dynamic_sequences = []
+            dynamic_labels = []
+            dynamic_users = []
+            
+            for sample in dynamic_samples:
+                # Asegurar que la secuencia tenga forma correcta
+                if sample.sequence.ndim == 1:
+                    sequence = sample.sequence.reshape(1, -1)
+                else:
+                    sequence = sample.sequence
+                
+                dynamic_sequences.append(sequence)
+                dynamic_labels.append(sample.transition_type)
+                dynamic_users.append(sample.user_id)
+            
+            dynamic_sequences = np.array(dynamic_sequences)
+            dynamic_labels = np.array(dynamic_labels)
+            dynamic_users = np.array(dynamic_users)
+            
+            # 4. Ajustar pipelines con datos 
+            logger.info("Ajustando pipelines de transformación...")
+            anatomical_features_transformed = self.anatomical_pipeline.fit_transform(anatomical_features)
+            
+            # Procesar secuencias dinámicas
+            original_shape = dynamic_sequences.shape
+            dynamic_sequences_flat = dynamic_sequences.reshape(len(dynamic_sequences), -1)
+            dynamic_sequences_transformed_flat = self.dynamic_pipeline.fit_transform(dynamic_sequences_flat)
+            dynamic_sequences_transformed = dynamic_sequences_transformed_flat.reshape(original_shape)
+            
+            # 5. Crear encoders
+            logger.info("Creando encoders...")
+            self.user_encoders = {user: i for i, user in enumerate(set(anatomical_users))}
+            self.class_encoders = {cls: i for i, cls in enumerate(set(anatomical_labels))}
+            
+            # 6. Balancear clases usando solo datos 
+            if self.config.balancing_method != BalancingMethod.NONE:
+                logger.info("Aplicando balanceo...")
+                anatomical_features_balanced, anatomical_labels_balanced, anatomical_users_balanced = \
+                    self.balance_real_classes(anatomical_features_transformed, anatomical_labels, anatomical_users)
+            else:
+                anatomical_features_balanced = anatomical_features_transformed
+                anatomical_labels_balanced = anatomical_labels
+                anatomical_users_balanced = anatomical_users
+            
+            # 7. Crear splits estratificados 
+            logger.info("Creando splits estratificados por usuario...")
+            splits = self.create_real_user_stratified_splits(anatomical_samples, dynamic_samples)
+            
+            # 8. Crear dataset procesado 
+            self.processed_dataset = RealProcessedDataset(
+                anatomical_features=anatomical_features_balanced,
+                anatomical_labels=anatomical_labels_balanced,
+                anatomical_users=anatomical_users_balanced,
+                dynamic_sequences=dynamic_sequences_transformed,
+                dynamic_labels=dynamic_labels,
+                dynamic_users=dynamic_users,
+                splits=splits,
+                anatomical_pipeline=self.anatomical_pipeline,
+                dynamic_pipeline=self.dynamic_pipeline,
+                quality_metrics=quality_metrics,
+                preprocessing_stats=self._calculate_real_preprocessing_stats()
+            )
+            
+            # 9. Actualizar estado
+            self.is_fitted = True
+            
+            logger.info("✓ Preprocesador ajustado exitosamente con datos REALES")
+            logger.info(f"  - Muestras anatómicas procesadas: {len(anatomical_features_balanced)}")
+            logger.info(f"  - Secuencias dinámicas procesadas: {len(dynamic_sequences_transformed)}")
+            logger.info(f"  - Usuarios únicos: {len(self.user_encoders)}")
+            logger.info(f"  - Gestos únicos: {len(self.class_encoders)}")
+            
+            return True
+            
+        except Exception as e:
+            logger.error("Error ajustando preprocesador con datos REALES", e)
+            return False
+
     def balance_real_classes(self, features: np.ndarray, labels: np.ndarray, 
                             users: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Balancea clases usando solo datos REALES existentes."""
+        """Balancea clases."""
         try:
-            logger.info("Balanceando clases con datos REALES...")
+            logger.info("Balanceando clases con datos...")
             
             if self.config.balancing_method == BalancingMethod.NONE:
                 return features, labels, users
@@ -603,14 +812,14 @@ class RealFeaturePreprocessor:
     
     def create_real_user_stratified_splits(self, anatomical_samples: List[RealBiometricSample], 
                                           dynamic_samples: List[RealDynamicSample]) -> Dict[str, Dict[str, Any]]:
-        """Crea splits estratificados por usuario usando datos REALES."""
+        """Crea splits estratificados por usuario."""
         try:
             logger.info("Creando splits estratificados...")
             
             all_users = list(set([s.user_id for s in anatomical_samples + dynamic_samples]))
             
             if len(all_users) < 3:
-                logger.warning("Pocos usuarios, división simple")
+                logger.warning("Pocos usuarios para splits, división simple")
                 train_users = all_users[:max(1, int(len(all_users) * 0.6))]
                 val_users = all_users[len(train_users):max(len(train_users)+1, len(train_users) + int(len(all_users) * 0.2))]
                 test_users = all_users[len(train_users)+len(val_users):]
@@ -652,7 +861,7 @@ class RealFeaturePreprocessor:
                 elif sample.user_id in test_users:
                     splits['samples']['test'].append(sample.sample_id if hasattr(sample, 'sample_id') else sample.sequence_id)
             
-            logger.info(f"Splits creados - Train: {len(train_users)}, Val: {len(val_users)}, Test: {len(test_users)}")
+            logger.info(f"Splits creados - Train: {len(train_users)} usuarios, Val: {len(val_users)} usuarios, Test: {len(test_users)} usuarios")
             
             return splits
             
@@ -668,6 +877,8 @@ class RealFeaturePreprocessor:
                 'samples': {'train': [], 'validation': [], 'test': []}
             }
         
+    
+    #NUEVO
     def fit_real_data(self, anatomical_samples: List[RealBiometricSample], 
                      dynamic_samples: List[RealDynamicSample]) -> bool:
         """Ajusta el preprocesador con datos REALES de usuarios."""
@@ -790,7 +1001,7 @@ class RealFeaturePreprocessor:
             return False
     
     def _calculate_real_preprocessing_stats(self) -> Dict[str, Any]:
-        """Calcula estadísticas de preprocesamiento usando datos REALES."""
+        """Calcula estadísticas de preprocesamiento."""
         try:
             if not self.processed_dataset:
                 return {}
@@ -844,7 +1055,7 @@ class RealFeaturePreprocessor:
             
             summary = {
                 'status': 'fitted',
-                'version': '2.0_real',
+                'version': '2.0',
                 'is_real_data': True,
                 'no_synthetic_data': True,
                 'config': {
@@ -887,7 +1098,7 @@ class RealFeaturePreprocessor:
             }
     
     def save_real_preprocessor(self, filepath: Optional[str] = None) -> bool:
-        """Guarda el preprocesador REAL ajustado."""
+        """Guarda el preprocesador ajustado."""
         try:
             if not self.is_fitted:
                 logger.error("Preprocesador no está ajustado")
@@ -906,7 +1117,7 @@ class RealFeaturePreprocessor:
                 'config': self.config,
                 'preprocessing_stats': self.preprocessing_stats,
                 'is_fitted': self.is_fitted,
-                'version': '2.0_real',
+                'version': '2.0',
                 'is_real_data': True,
                 'no_synthetic_data': True
             }
@@ -922,7 +1133,7 @@ class RealFeaturePreprocessor:
             return False
     
     def load_real_preprocessor(self, filepath: str) -> bool:
-        """Carga un preprocesador REAL previamente ajustado."""
+        """Carga un preprocesador previamente ajustado."""
         try:
             if not Path(filepath).exists():
                 logger.error(f"Archivo no encontrado: {filepath}")
@@ -954,10 +1165,10 @@ class RealFeaturePreprocessor:
             logger.error(f"Error cargando: {e}")
             return False
         
-# ===== TRANSFORMADORES PERSONALIZADOS REALES =====
+# ===== TRANSFORMADORES PERSONALIZADOS =====
 
 class RealOutlierRemover(BaseEstimator, TransformerMixin):
-    """Removedor de outliers para características anatómicas REALES."""
+    """Removedor de outliers para características anatómicas."""
     
     def __init__(self, threshold=3.0):
         self.threshold = threshold
@@ -983,7 +1194,7 @@ class RealOutlierRemover(BaseEstimator, TransformerMixin):
 
 
 class RealVarianceThresholdSelector(BaseEstimator, TransformerMixin):
-    """Selector de características por varianza usando datos REALES."""
+    """Selector de características por varianza."""
     
     def __init__(self, threshold=0.01):
         self.threshold = threshold
@@ -1003,7 +1214,7 @@ class RealVarianceThresholdSelector(BaseEstimator, TransformerMixin):
 
 
 class RealTemporalOutlierRemover(BaseEstimator, TransformerMixin):
-    """Removedor de outliers para secuencias temporales REALES."""
+    """Removedor de outliers para secuencias temporales."""
     
     def __init__(self, threshold=3.0):
         self.threshold = threshold
@@ -1027,7 +1238,7 @@ class RealTemporalOutlierRemover(BaseEstimator, TransformerMixin):
 
 
 class RealTemporalStandardScaler(BaseEstimator, TransformerMixin):
-    """Standard scaler para datos temporales REALES."""
+    """Standard scaler para datos temporales."""
     
     def __init__(self):
         self.mean_ = None
@@ -1065,7 +1276,7 @@ class RealTemporalRobustScaler(BaseEstimator, TransformerMixin):
 
 
 class RealTemporalMinMaxScaler(BaseEstimator, TransformerMixin):
-    """MinMax scaler para datos temporales REALES."""
+    """MinMax scaler para datos temporales."""
     
     def __init__(self):
         self.min_ = None
@@ -1084,7 +1295,7 @@ class RealTemporalMinMaxScaler(BaseEstimator, TransformerMixin):
 
 
 class RealTemporalSmoother(BaseEstimator, TransformerMixin):
-    """Suavizador temporal para secuencias REALES."""
+    """Suavizador temporal para secuencias."""
     
     def __init__(self, window_size=3):
         self.window_size = window_size
@@ -1112,7 +1323,7 @@ class RealTemporalSmoother(BaseEstimator, TransformerMixin):
 _real_preprocessor_instance = None
 
 def get_real_feature_preprocessor() -> RealFeaturePreprocessor:
-    """Obtiene instancia global del preprocesador REAL."""
+    """Obtiene instancia global del preprocesador."""
     global _real_preprocessor_instance
     
     if _real_preprocessor_instance is None:
@@ -1126,98 +1337,3 @@ FeaturePreprocessor = RealFeaturePreprocessor
 get_feature_preprocessor = get_real_feature_preprocessor
 
 
-# ===== TESTING =====
-if __name__ == "__main__":
-    print("=== TESTING MÓDULO 11: FEATURE_PREPROCESSING REAL ===")
-    
-    # Test 1: Inicialización
-    preprocessor = RealFeaturePreprocessor()
-    print("✓ Preprocesador inicializado")
-    
-    # Test 2: Configuración
-    config = preprocessor.config
-    print(f"✓ Config: {config.anatomical_normalization.value}, {config.balancing_method.value}")
-    
-    # Test 3: Pipelines
-    try:
-        anat_pipeline = preprocessor.create_real_anatomical_pipeline()
-        dyn_pipeline = preprocessor.create_real_dynamic_pipeline()
-        print(f"✓ Pipelines: {len(anat_pipeline.steps)} anatómico, {len(dyn_pipeline.steps)} dinámico")
-    except Exception as e:
-        print(f"✗ Error pipelines: {e}")
-    
-    # Test 4: Transformadores
-    try:
-        X_test = np.array([[1, 2], [2, 3], [3, 4], [10, 11], [2, 3]])
-        outlier_remover = RealOutlierRemover(threshold=2.0)
-        X_clean = outlier_remover.fit_transform(X_test)
-        print(f"✓ OutlierRemover: {X_test.shape} → {X_clean.shape}")
-        
-        X_temporal = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-        temporal_scaler = RealTemporalStandardScaler()
-        X_scaled = temporal_scaler.fit_transform(X_temporal)
-        print(f"✓ TemporalScaler: mean={np.mean(X_scaled):.3f}, std={np.std(X_scaled):.3f}")
-        
-    except Exception as e:
-        print(f"✗ Error transformadores: {e}")
-    
-    # Test 5: Muestras de prueba
-    try:
-        anat_features = [np.random.randn(180) for _ in range(20)]
-        dyn_features = [np.random.randn(50, 320) for _ in range(20)]
-        user_ids = [f"user_{i//4}" for i in range(20)]
-        gestures = ["Victory", "Thumb_Up", "Open_Palm", "Closed_Fist"] * 5
-        
-        anat_samples = []
-        dyn_samples = []
-        
-        for i in range(20):
-            anat_sample = RealBiometricSample(
-                user_id=user_ids[i],
-                sample_id=f"anat_{i}",
-                features=anat_features[i],
-                gesture_name=gestures[i],
-                confidence=0.95,
-                timestamp=time.time()
-            )
-            anat_samples.append(anat_sample)
-            
-            dyn_sample = RealDynamicSample(
-                user_id=user_ids[i],
-                sequence_id=f"dyn_{i}",
-                temporal_features=dyn_features[i],
-                gesture_sequence=[gestures[i]],
-                transition_types=['hold'],
-                timestamp=time.time(),
-                duration=1.0,
-                quality_score=0.95
-            )
-            dyn_samples.append(dyn_sample)
-        
-        print(f"✓ Muestras creadas: {len(anat_samples)} anatómicas, {len(dyn_samples)} dinámicas")
-        
-    except Exception as e:
-        print(f"✗ Error muestras: {e}")
-    
-    # Test 6: Análisis de calidad
-    try:
-        if 'anat_samples' in locals():
-            quality_metrics = preprocessor.analyze_real_data_quality(anat_samples, dyn_samples)
-            print(f"✓ Calidad: Score {quality_metrics.data_quality_score:.1f}/100")
-            print(f"  Recomendaciones: {len(quality_metrics.recommendations)}")
-        
-    except Exception as e:
-        print(f"✗ Error calidad: {e}")
-    
-    # Test 7: Splits
-    try:
-        if 'anat_samples' in locals():
-            splits = preprocessor.create_real_user_stratified_splits(anat_samples, dyn_samples)
-            train_users = len(splits['users']['train'])
-            test_users = len(splits['users']['test'])
-            print(f"✓ Splits: {train_users} train, {test_users} test")
-        
-    except Exception as e:
-        print(f"✗ Error splits: {e}")
-    
-    print("=== FIN TESTING MÓDULO 11 ===")

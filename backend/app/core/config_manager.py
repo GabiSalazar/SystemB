@@ -539,7 +539,17 @@ class ConfigManager:
     def log_capture_info(self, gesture_name: str, capture_num: int, 
                         hand_confidence: float, gesture_confidence: float, 
                         hand_size: float, user_id: Optional[str] = None):
-        """Registra información detallada de una captura."""
+        """
+        Registra información detallada de una captura.
+        
+        Args:
+            gesture_name: Nombre del gesto capturado
+            capture_num: Número de captura
+            hand_confidence: Confianza de detección de mano
+            gesture_confidence: Confianza de reconocimiento de gesto
+            hand_size: Tamaño calculado de la mano
+            user_id: ID del usuario (opcional)
+        """
         if not self.logger:
             return
             
@@ -551,7 +561,13 @@ class ConfigManager:
         )
     
     def log_error(self, message: str, exception: Optional[Exception] = None):
-        """Registra errores con información detallada."""
+        """
+        Registra errores con información detallada.
+        
+        Args:
+            message: Mensaje de error
+            exception: Excepción opcional para incluir traceback
+        """
         if not self.logger:
             logging.error(f"ERROR: {message}")
             return

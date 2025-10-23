@@ -19,7 +19,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -97,6 +97,7 @@ class QualityAssessment:
     gesture_valid: bool = False
     ready_for_capture: bool = False
     quality_score: float = 0.0
+    overall_score: float = 0.0 
     hand_confidence: float = 0.0
     gesture_confidence: float = 0.0
     validation_details: Dict[str, Any] = field(default_factory=dict)
@@ -109,6 +110,8 @@ class QualityValidator:
     
     def __init__(self):
         """Inicializa el validador de calidad."""
+        self.logger = get_logger()
+
         # Cargar configuraciones
         self.thresholds = self._load_thresholds()
         self.visibility_config = self._load_visibility_config()
@@ -410,7 +413,7 @@ class QualityValidator:
                 gesture_valid = (detected_gesture == target_gesture and 
                                gesture_confidence >= self.thresholds['gesture_confidence'])
             
-            logger.debug(f"🎯 GESTO DEBUG: Detectado='{detected_gesture}', Esperado='{target_gesture}', Confianza={gesture_confidence:.3f}, Válido={gesture_valid}")
+            logger.debug(f"🎯 GESTO DEBUG: Detectado='{detected_gesture}', Esperado='{target_gesture}', Confianza={gesture_confidence:.3f}, Umbral= {self.thresholds['gesture_confidence']:.3f}, Válido={gesture_valid}")
             
             # 7. Verificar extensión
             extension_valid = self.check_hand_extension(hand_landmarks, target_gesture)
@@ -479,7 +482,21 @@ class QualityValidator:
                            visibility: VisibilityAnalysis, area: AreaValidation,
                            hand_size: HandSizeMetrics, movement: MovementAnalysis,
                            extension_valid: bool) -> float:
-        """Calcula un score de calidad general (0-100)."""
+        """
+        Calcula un score de calidad general (0-100).
+        
+        Args:
+            hand_confidence: Confianza de detección de mano
+            gesture_confidence: Confianza de gesto
+            visibility: Análisis de visibilidad
+            area: Validación de área
+            hand_size: Métricas de tamaño
+            movement: Análisis de movimiento
+            extension_valid: Si la extensión es válida
+            
+        Returns:
+            Score de calidad (0-100)
+        """
         try:
             components = {
                 'hand_confidence': hand_confidence * 25,
@@ -495,15 +512,18 @@ class QualityValidator:
             
             logger.debug("=" * 70)
             logger.debug("QUALITY SCORE BREAKDOWN")
-            logger.debug(f"hand_confidence:    {components['hand_confidence']:6.2f}/25")
-            logger.debug(f"gesture_confidence: {components['gesture_confidence']:6.2f}/20")
-            logger.debug(f"visibility:         {components['visibility']:6.2f}/15")
-            logger.debug(f"area_coverage:      {components['area_coverage']:6.2f}/15")
-            logger.debug(f"size_quality:       {components['size_quality']:6.2f}/10")
-            logger.debug(f"stability:          {components['stability']:6.2f}/10")
-            logger.debug(f"extension:          {components['extension']:6.2f}/5")
+            logger.debug("=" * 70)
+            logger.debug(f"hand_confidence:    {components['hand_confidence']:6.2f}/25  (raw: {hand_confidence:.3f})")
+            logger.debug(f"gesture_confidence: {components['gesture_confidence']:6.2f}/20  (raw: {gesture_confidence:.3f})")
+            logger.debug(f"visibility:         {components['visibility']:6.2f}/15  (percentage: {visibility.visibility_percentage:.1f}%)")
+            logger.debug(f"area_coverage:      {components['area_coverage']:6.2f}/15  (percentage: {area.coverage_percentage:.1f}%)")
+            logger.debug(f"size_quality:       {components['size_quality']:6.2f}/10  (is_valid: {hand_size.is_valid}, hand_size: {hand_size.hand_size:.4f})")
+            logger.debug(f"stability:          {components['stability']:6.2f}/10  (is_stable: {movement.is_stable}, frames: {movement.stable_frames})")
+            logger.debug(f"extension:          {components['extension']:6.2f}/5   (valid: {extension_valid})")
+            logger.debug("-" * 70)
             logger.debug(f"TOTAL SCORE:        {total_score:6.2f}/100")
             logger.debug("=" * 70)
+
             
             return min(100.0, max(0.0, total_score))
             

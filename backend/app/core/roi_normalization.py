@@ -25,6 +25,8 @@ except ImportError:
     def log_info(msg): 
         print(f"INFO: {msg}")
 
+# Importar módulo de configuración centralizado
+#from app.core.config_manager import get_config, get_logger, log_error, log_info
 
 class ROIDistanceStatus(Enum):
     """Estados de distancia basados en resolución del ROI."""

@@ -406,3 +406,29 @@ async def get_database_config():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    
+
+@router.get("/debug/paths")
+async def debug_database_paths():
+    """Endpoint temporal para debugging - verificar rutas"""
+    try:
+        db = get_biometric_database()
+        
+        import os
+        
+        return {
+            "status": "success",
+            "database_path": str(db.db_path),
+            "database_path_absolute": str(db.db_path.absolute()),
+            "users_dir": str(db.db_path / 'users'),
+            "users_dir_exists": (db.db_path / 'users').exists(),
+            "users_files_count": len(list((db.db_path / 'users').glob('*.json'))) if (db.db_path / 'users').exists() else 0,
+            "templates_dir": str(db.db_path / 'templates'),
+            "templates_dir_exists": (db.db_path / 'templates').exists(),
+            "templates_files_count": len(list((db.db_path / 'templates').glob('*.json'))) if (db.db_path / 'templates').exists() else 0,
+            "users_in_memory": len(db.users),
+            "templates_in_memory": len(db.templates),
+            "current_working_directory": os.getcwd()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

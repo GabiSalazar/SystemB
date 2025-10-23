@@ -23,7 +23,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -87,6 +87,8 @@ class MediaPipeProcessor:
         Args:
             model_path: Ruta al modelo gesture_recognizer.task
         """
+        self.logger = get_logger()
+
         # Configuración desde config_manager
         self.hands_config = self._load_hands_config()
         self.gesture_config = self._load_gesture_config()

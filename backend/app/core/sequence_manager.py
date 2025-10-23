@@ -19,7 +19,7 @@ except ImportError:
     def get_config(key, default=None): 
         return default
     def get_logger(): 
-        return None
+        return print
     def log_error(msg, exc=None): 
         logging.error(f"ERROR: {msg}")
     def log_info(msg): 
@@ -142,6 +142,7 @@ class SequenceManager:
     
     def __init__(self):
         """Inicializa el gestor de secuencias."""
+        self.logger = get_logger()
         
         # Configuración
         self.config = self._load_sequence_config()
@@ -474,6 +475,7 @@ class SequenceManager:
             logger.info(f"¡SECUENCIA COMPLETADA! Duración: {duration:.2f}s")
             logger.info(f"Usuario: {self.current_user_sequence.user_id} - Tasa de éxito: {self.current_user_sequence.success_rate:.1f}%")
             
+            completed_attempt = self.current_attempt
             self.current_attempt = None
             self.current_user_sequence = None
             
@@ -631,6 +633,7 @@ class SequenceManager:
         
         return result
     
+    #NUEVO
     def get_user_sequence(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Obtiene la secuencia de un usuario específico."""
         if user_id not in self.user_sequences:
@@ -662,7 +665,7 @@ class SequenceManager:
             "event_log_size": len(self.event_log),
             "config": self.config.copy()
         }
-    
+    #NUEVO
     def get_sequence_history(self, user_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """Obtiene historial de secuencias."""
         history = self.sequence_history
@@ -829,6 +832,7 @@ class SequenceManager:
             logger.error(f"Error eliminando secuencia para usuario {user_id}: {e}")
             return False
     
+    #NUEVO
     def update_user_sequence(self, user_id: str, gesture_names: List[str]) -> bool:
         """Actualiza la secuencia de un usuario existente."""
         try:
@@ -851,14 +855,14 @@ class SequenceManager:
         except Exception as e:
             logger.error(f"Error actualizando secuencia para usuario {user_id}: {e}")
             return False
-    
+    #NUEVO
     def list_available_gestures(self) -> List[str]:
         """Lista los gestos disponibles para crear secuencias."""
         return get_config('available_gestures', [
             "Closed_Fist", "Open_Palm", "Pointing_Up", 
             "Thumb_Down", "Thumb_Up", "Victory", "ILoveYou"
         ])
-    
+    #NUEVO
     def validate_gesture_sequence(self, gesture_names: List[str]) -> Tuple[bool, Optional[str]]:
         """Valida si una secuencia de gestos es válida."""
         try:
