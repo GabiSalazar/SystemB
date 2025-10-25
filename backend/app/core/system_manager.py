@@ -19,6 +19,11 @@ from app.core.siamese_anatomical_network import get_real_siamese_anatomical_netw
 from app.core.siamese_dynamic_network import get_real_siamese_dynamic_network
 from app.core.camera_manager import get_camera_manager, release_camera
 from app.core.mediapipe_processor import get_mediapipe_processor, release_mediapipe
+from app.core.anatomical_features_extractor import get_anatomical_features_extractor
+from app.core.dynamic_features_extractor import get_real_dynamic_features_extractor
+from app.core.sequence_manager import get_sequence_manager
+from app.core.quality_validator import get_quality_validator
+from app.core.reference_area_manager import get_reference_area_manager
 
 logger = get_logger()
 
@@ -128,9 +133,16 @@ class BiometricSystemManager:
         self.anatomical_network = None
         self.dynamic_network = None
         
-        # Componentes auxiliares
+        # Componentes auxiliares (Nivel 1)
         self.camera_manager = None
         self.mediapipe_processor = None
+        self.quality_validator = None
+        self.reference_area_manager = None
+        
+        # Extractores (Nivel 2)
+        self.anatomical_extractor = None
+        self.dynamic_extractor = None
+        self.sequence_manager = None
         
         logger.info("=" * 80)
         logger.info("🚀 BiometricSystemManager v2.0.0 Real Edition Iniciado")
@@ -196,7 +208,8 @@ class BiometricSystemManager:
             modules_ok, missing = self.verify_modules()
             if not modules_ok:
                 self.state.error_message = f"Módulos faltantes: {', '.join(missing)}"
-                logger.error("🚨 ERROR: Módulos no disponibles")
+                logger.error("❌ Error inicializando sistema biométrico")
+                logger.error(f"🔍 Detalle del error: {self.state.error_message}")
                 return False
             
             # ================================================================
@@ -207,6 +220,8 @@ class BiometricSystemManager:
             
             if not self._initialize_real_basic_components():
                 self.state.error_message = "Error en Nivel 1 (Componentes Básicos)"
+                logger.error("❌ Error inicializando sistema biométrico")
+                logger.error(f"🔍 Detalle del error: {self.state.error_message}")
                 return False
             
             self.state.initialization_level = InitializationLevel.BASIC_COMPONENTS
@@ -220,6 +235,8 @@ class BiometricSystemManager:
             
             if not self._initialize_real_feature_extractors():
                 self.state.error_message = "Error en Nivel 2 (Extractores)"
+                logger.error("❌ Error inicializando sistema biométrico")
+                logger.error(f"🔍 Detalle del error: {self.state.error_message}")
                 return False
             
             self.state.initialization_level = InitializationLevel.FEATURE_EXTRACTION
@@ -270,19 +287,28 @@ class BiometricSystemManager:
             return True
             
         except Exception as e:
-            logger.error(f"🚨 ERROR CRÍTICO EN INICIALIZACIÓN: {e}", exc_info=True)
+            logger.error(f"❌ Error inicializando sistema biométrico", exc_info=True)
+            logger.error(f"🔍 Detalle del error: {str(e)}")
             self.state.error_message = str(e)
             return False
     
     def _initialize_real_basic_components(self) -> bool:
         """
         NIVEL 1: Inicializa componentes básicos.
-        Equivalente a _initialize_real_basic_components() del MAIN.
+        Equivalente a _initialize_real_basic_components() del MAIN notebook.
+        
+        ORDEN CRÍTICO (igual al notebook):
+        1. Base de datos
+        2. Cámara
+        3. MediaPipe
+        4. Validadores
         """
         try:
+            # ============================================================
+            # 1. BASE DE DATOS
+            # ============================================================
             logger.info("Inicializando Base de Datos...")
             
-            # Módulo 13: BiometricDatabase
             self.database = get_biometric_database()
             
             # Verificar usuarios existentes
@@ -300,21 +326,87 @@ class BiometricSystemManager:
             except:
                 pass
             
+            # ============================================================
+            # 2. CÁMARA (CRÍTICO: Antes de extractores dinámicos)
+            # ============================================================
+            logger.info("Inicializando Cámara...")
+            self.camera_manager = get_camera_manager()
+            logger.info("✅ Cámara (instancia global)")
+            
+            # ============================================================
+            # 3. MEDIAPIPE (CRÍTICO: Antes de extractores dinámicos)
+            # ============================================================
+            logger.info("Inicializando MediaPipe...")
+            self.mediapipe_processor = get_mediapipe_processor()
+            
+            if hasattr(self.mediapipe_processor, 'initialize'):
+                if not self.mediapipe_processor.initialize():
+                    logger.error("✗ ERROR: No se pudo inicializar MediaPipe")
+                    return False
+            
+            logger.info("✅ MediaPipe")
+            
+            # ============================================================
+            # 4. VALIDADORES (Opcional pero recomendado)
+            # ============================================================
+            try:
+                self.quality_validator = get_quality_validator()
+                self.reference_area_manager = get_reference_area_manager()
+                logger.info("✅ Validadores de calidad")
+            except Exception as e:
+                logger.warning(f"⚠️ Validadores no inicializados: {e}")
+            
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error en componentes básicos: {e}")
+            logger.error(f"❌ Error en componentes básicos: {e}", exc_info=True)
             return False
     
     def _initialize_real_feature_extractors(self) -> bool:
         """
         NIVEL 2: Inicializa extractores de características.
-        Equivalente a _initialize_real_feature_extractors() del MAIN.
+        Equivalente a _initialize_real_feature_extractors() del MAIN notebook.
+        
+        IMPORTANTE: MediaPipe y Camera YA deben estar inicializados del Nivel 1
+        
+        ORDEN (igual al notebook):
+        1. AnatomicalFeaturesExtractor
+        2. RealDynamicFeaturesExtractor (requiere MediaPipe)
+        3. SequenceManager
+        4. EnrollmentSystem
         """
         try:
-            logger.info("Inicializando Sistema de Enrollment...")
+            # ============================================================
+            # 1. ANATOMICAL FEATURES EXTRACTOR
+            # ============================================================
+            logger.info("  Inicializando AnatomicalFeaturesExtractor...")
+            self.anatomical_extractor = get_anatomical_features_extractor()
+            logger.info("  ✅ AnatomicalFeaturesExtractor inicializado")
             
-            # Módulo 14: RealEnrollmentSystem
+            # ============================================================
+            # 2. DYNAMIC FEATURES EXTRACTOR (requiere MediaPipe del Nivel 1)
+            # ============================================================
+            logger.info("  Inicializando RealDynamicFeaturesExtractor...")
+            
+            # CRÍTICO: Verificar que MediaPipe esté disponible
+            if self.mediapipe_processor is None:
+                logger.error("ERROR: MediaPipeProcessor no está inicializado antes que DynamicFeaturesExtractor.")
+                return False
+            
+            self.dynamic_extractor = get_real_dynamic_features_extractor()
+            logger.info("  ✅ RealDynamicFeaturesExtractor inicializado")
+            
+            # ============================================================
+            # 3. SEQUENCE MANAGER
+            # ============================================================
+            logger.info("  Inicializando SequenceManager...")
+            self.sequence_manager = get_sequence_manager()
+            logger.info("  ✅ SequenceManager inicializado")
+            
+            # ============================================================
+            # 4. ENROLLMENT SYSTEM
+            # ============================================================
+            logger.info("Inicializando Sistema de Enrollment...")
             self.enrollment_system = get_real_enrollment_system()
             
             # Verificar modo bootstrap
@@ -328,7 +420,7 @@ class BiometricSystemManager:
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error en extractores: {e}")
+            logger.error(f"❌ Error en extractores: {e}", exc_info=True)
             return False
     
     def _check_real_networks_trained(self) -> bool:
@@ -337,215 +429,102 @@ class BiometricSystemManager:
         Equivalente a _check_real_networks_trained() del MAIN.
         """
         try:
-            # Módulo 9: RealSiameseAnatomicalNetwork
-            logger.info("Verificando Red Anatómica...")
-            self.anatomical_network = get_real_siamese_anatomical_network()
+            logger.info("Verificando estado de redes neuronales...")
             
-            # Módulo 10: RealSiameseDynamicNetwork
-            logger.info("Verificando Red Dinámica...")
+            # Obtener instancias de las redes
+            self.anatomical_network = get_real_siamese_anatomical_network()
             self.dynamic_network = get_real_siamese_dynamic_network()
             
-            # Verificar archivos de modelo
-            models_dir = Path('biometric_data/models')
-            anat_file = models_dir / 'anatomical_model.h5'
-            dyn_file = models_dir / 'dynamic_model.h5'
+            # Verificar si están entrenadas
+            anatomical_trained = self.anatomical_network.is_trained
+            dynamic_trained = self.dynamic_network.is_trained
             
-            anat_trained = anat_file.exists()
-            dyn_trained = dyn_file.exists()
+            logger.info(f"  Red anatómica: {'✅ Entrenada' if anatomical_trained else '⚠️ No entrenada'}")
+            logger.info(f"  Red dinámica: {'✅ Entrenada' if dynamic_trained else '⚠️ No entrenada'}")
             
-            logger.info(f"📊 Estado de redes:")
-            logger.info(f"   - Anatómica: {'✅ Entrenada' if anat_trained else '❌ Sin entrenar'}")
-            logger.info(f"   - Dinámica: {'✅ Entrenada' if dyn_trained else '❌ Sin entrenar'}")
+            both_trained = anatomical_trained and dynamic_trained
             
-            # Cargar modelos si existen
-            if anat_trained:
-                try:
-                    success = self.anatomical_network.load_real_trained_model(str(anat_file))
-                    if success:
-                        logger.info("   ✅ Modelo anatómico cargado correctamente")
-                except Exception as e:
-                    logger.warning(f"   ⚠️ Error cargando modelo anatómico: {e}")
-            
-            if dyn_trained:
-                try:
-                    success = self.dynamic_network.load_real_trained_model(str(dyn_file))
-                    if success:
-                        logger.info("   ✅ Modelo dinámico cargado correctamente")
-                except Exception as e:
-                    logger.warning(f"   ⚠️ Error cargando modelo dinámico: {e}")
-            
-            both_trained = anat_trained and dyn_trained
+            if both_trained:
+                logger.info("✅ Ambas redes están entrenadas y listas")
+            else:
+                logger.warning("⚠️ Las redes necesitan entrenamiento")
+                logger.info(f"📝 Se requieren al menos 2 usuarios para entrenar")
             
             return both_trained
             
         except Exception as e:
-            logger.error(f"❌ Error verificando redes: {e}")
+            logger.error(f"❌ Error verificando redes: {e}", exc_info=True)
             return False
     
     def _initialize_real_authentication_system(self) -> bool:
         """
-        NIVEL 4: Inicializa el sistema de autenticación.
+        NIVEL 4: Inicializa sistema de autenticación.
         Equivalente a _initialize_real_authentication_system() del MAIN.
         """
         try:
             if not self.state.networks_trained:
-                logger.info("⏭️  Omitiendo autenticación (redes no entrenadas)")
+                logger.warning("⚠️ Redes no entrenadas - Autenticación no disponible aún")
                 return False
             
             logger.info("Inicializando Sistema de Autenticación...")
-            
-            # Módulo 15: RealAuthenticationSystem
             self.authentication_system = get_real_authentication_system()
             
-            # Inicializar pipeline completo
-            if self.authentication_system.initialize_real_system():
-                logger.info("✅ Sistema de autenticación listo")
-                return True
-            else:
-                logger.error("❌ Error inicializando autenticación")
-                return False
-                
+            logger.info("✅ Sistema de autenticación listo")
+            return True
+            
         except Exception as e:
-            logger.error(f"❌ Error en autenticación: {e}")
+            logger.error(f"❌ Error en sistema de autenticación: {e}", exc_info=True)
             return False
     
     def _print_initialization_summary(self):
-        """
-        Imprime resumen de inicialización.
-        Equivalente a show_status() del MAIN.
-        """
+        """Imprime resumen de la inicialización."""
         logger.info("\n" + "=" * 80)
         logger.info("📊 RESUMEN DE INICIALIZACIÓN")
         logger.info("=" * 80)
-        logger.info(f"  Nivel de Inicialización: {self.state.initialization_level.name}")
-        logger.info(f"  Usuarios Registrados:    {self.state.users_count}")
-        logger.info(f"  Redes Entrenadas:        {'✅ Sí' if self.state.networks_trained else '❌ No'}")
-        logger.info(f"  Base de Datos:           {'✅ Lista' if self.state.database_ready else '❌ Error'}")
-        logger.info(f"  Enrollment:              {'✅ Activo' if self.state.enrollment_active else '❌ Inactivo'}")
-        logger.info(f"  Autenticación:           {'✅ Activa' if self.state.authentication_active else '❌ Inactiva'}")
-        logger.info(f"  Modo Bootstrap:          {'🚀 Sí' if self.state.bootstrap_mode else 'No'}")
-        
-        if self.state.error_message:
-            logger.error(f"  ⚠️ Error:                {self.state.error_message}")
-        
-        logger.info("=" * 80)
+        logger.info(f"  🎯 Nivel alcanzado: {self.state.initialization_level.name}")
+        logger.info(f"  👥 Usuarios registrados: {self.state.users_count}")
+        logger.info(f"  🧠 Redes entrenadas: {'✅ Sí' if self.state.networks_trained else '⚠️ No'}")
+        logger.info(f"  📝 Enrollment: {'✅ Activo' if self.state.enrollment_active else '❌ Inactivo'}")
+        logger.info(f"  🔐 Autenticación: {'✅ Activa' if self.state.authentication_active else '❌ Inactiva'}")
+        logger.info(f"  🚀 Bootstrap: {'✅ Activo' if self.state.bootstrap_mode else '❌ Inactivo'}")
+        logger.info("=" * 80 + "\n")
     
     def get_system_status(self) -> Dict[str, Any]:
         """
         Obtiene el estado actual del sistema.
-        Equivalente a show_status() pero retorna dict para API.
         
         Returns:
-            Dict con el estado completo del sistema
+            Dict con información completa del estado
         """
         uptime = time.time() - self.start_time
-        hours = int(uptime // 3600)
-        minutes = int((uptime % 3600) // 60)
-        seconds = int(uptime % 60)
-        
-        # Determinar modo del sistema
-        if self.state.error_message:
-            mode = SystemMode.ERROR
-        elif self.state.authentication_active:
-            mode = SystemMode.FULL_SYSTEM
-        elif self.state.networks_trained:
-            mode = SystemMode.TRAINING_READY
-        elif self.state.enrollment_active:
-            mode = SystemMode.ENROLLMENT_READY
-        else:
-            mode = SystemMode.BASIC_SETUP
         
         return {
-            'version': '2.0.0',
-            'status': 'operational' if not self.state.error_message else 'error',
-            'mode': mode.value,
-            
-            # Estado de inicialización
-            'initialization': {
-                'level': self.state.initialization_level.name,
-                'level_value': self.state.initialization_level.value,
-                'bootstrap_mode': self.state.bootstrap_mode
-            },
-            
-            # Componentes
-            'components': {
-                'database_ready': self.state.database_ready,
-                'enrollment_active': self.state.enrollment_active,
-                'authentication_active': self.state.authentication_active,
-                'networks_trained': self.state.networks_trained
-            },
-            
-            # Estadísticas
+            'status': 'operational' if self.state.initialization_level == InitializationLevel.FULL_PIPELINE else 'partial',
+            'initialization_level': self.state.initialization_level.name,
+            'initialization_level_value': self.state.initialization_level.value,
+            'users_count': self.state.users_count,
+            'networks_trained': self.state.networks_trained,
+            'database_ready': self.state.database_ready,
+            'enrollment_active': self.state.enrollment_active,
+            'authentication_active': self.state.authentication_active,
+            'bootstrap_mode': self.state.bootstrap_mode,
+            'error_message': self.state.error_message,
+            'uptime_seconds': uptime,
+            'modules_loaded': self.state.modules_loaded,
             'statistics': {
-                'users_count': self.state.users_count,
                 'total_enrollments': self.state.total_enrollments,
                 'total_authentications': self.state.total_authentications,
                 'total_verifications': self.state.total_verifications,
-                'total_identifications': self.state.total_identifications,
-                'modules_loaded': len([v for v in self.state.modules_loaded.values() if v]),
-                'total_modules': len(self.REQUIRED_MODULES)
-            },
-            
-            # Sistema
-            'system': {
-                'uptime': f"{hours:02d}:{minutes:02d}:{seconds:02d}",
-                'uptime_seconds': int(uptime),
-                'last_training': self.state.last_training_time,
-                'error': self.state.error_message
-            },
-            
-            # Módulos cargados
-            'modules': self.state.modules_loaded
+                'total_identifications': self.state.total_identifications
+            }
         }
-    
-    def list_users(self) -> List[Dict[str, Any]]:
-        """
-        Lista todos los usuarios registrados.
-        Equivalente a list_users() del MAIN.
-        
-        Returns:
-            Lista de diccionarios con información de usuarios
-        """
-        if not self.database:
-            return []
-        
-        users_list = []
-        
-        try:
-            all_users = self.database.list_users()
-            
-            for user_data in all_users:
-                # user_data puede ser UserProfile o dict
-                if hasattr(user_data, 'user_id'):
-                    # Es un UserProfile
-                    users_list.append({
-                        'user_id': user_data.user_id,
-                        'username': user_data.username,
-                        'gesture_sequence': user_data.gesture_sequence,
-                        'total_enrollments': getattr(user_data, 'total_enrollments', 0),
-                        'created_at': user_data.metadata.get('created_at', 'N/A') if hasattr(user_data, 'metadata') else 'N/A'
-                    })
-                else:
-                    # Es un dict
-                    users_list.append({
-                        'user_id': user_data.get('user_id', 'unknown'),
-                        'username': user_data.get('username', 'unknown'),
-                        'gesture_sequence': user_data.get('gesture_sequence', []),
-                        'total_enrollments': user_data.get('total_enrollments', 0),
-                        'created_at': user_data.get('created_at', 'N/A')
-                    })
-        except Exception as e:
-            logger.error(f"Error listando usuarios: {e}")
-        
-        return users_list
     
     def train_networks(self, force: bool = False) -> Dict[str, Any]:
         """
-        Entrena las redes neuronales con datos disponibles.
-        Equivalente a train_real_networks() del MAIN.
+        Entrena o reentrena las redes neuronales.
         
         Args:
-            force: Forzar reentrenamiento incluso si ya están entrenadas
+            force: Si True, fuerza reentrenamiento incluso si ya están entrenadas
         
         Returns:
             Dict con resultado del entrenamiento
@@ -553,192 +532,95 @@ class BiometricSystemManager:
         result = {
             'success': False,
             'message': '',
-            'details': {}
+            'anatomical_trained': False,
+            'dynamic_trained': False
         }
         
         try:
-            # Validar usuarios
+            # Verificar que haya suficientes usuarios
             if self.state.users_count < 2:
-                result['message'] = f"Se necesitan al menos 2 usuarios (actual: {self.state.users_count})"
-                logger.error(result['message'])
-                return result
-            
-            # Verificar si ya están entrenadas
-            if self.state.networks_trained and not force:
-                result['message'] = "Las redes ya están entrenadas. Use force=True para reentrenar."
+                result['message'] = f"Se requieren al menos 2 usuarios. Actualmente: {self.state.users_count}"
                 logger.warning(result['message'])
                 return result
             
             logger.info("=" * 80)
-            logger.info("🧠 INICIANDO ENTRENAMIENTO DE REDES NEURONALES")
+            logger.info("🚀 INICIANDO ENTRENAMIENTO DE REDES NEURONALES")
             logger.info("=" * 80)
             
-            training_start = time.time()
+            # Verificar si ya están entrenadas
+            if self.state.networks_trained and not force:
+                logger.info("⚠️ Las redes ya están entrenadas")
+                logger.info("💡 Usa force=True para reentrenar")
+                result['message'] = "Redes ya entrenadas (usa force=True para reentrenar)"
+                result['anatomical_trained'] = self.anatomical_network.is_trained
+                result['dynamic_trained'] = self.dynamic_network.is_trained
+                return result
             
-            # ================================================================
+            # ============================================================
             # ENTRENAR RED ANATÓMICA
-            # ================================================================
-            logger.info("\n🧠 [1/2] Entrenando Red Siamesa Anatómica...")
+            # ============================================================
+            logger.info("\n🧠 Entrenando Red Siamesa Anatómica...")
             logger.info("-" * 80)
             
-            anat_success = self.anatomical_network.train_with_real_data(self.database)
+            anatomical_result = self.anatomical_network.train_with_real_data(self.database)
             
-            if not anat_success:
-                result['message'] = "Error entrenando red anatómica"
-                logger.error(result['message'])
-                return result
+            if anatomical_result['success']:
+                logger.info("✅ Red anatómica entrenada exitosamente")
+                result['anatomical_trained'] = True
+            else:
+                logger.error(f"❌ Error entrenando red anatómica: {anatomical_result.get('message', 'Error desconocido')}")
             
-            logger.info("✅ Red Anatómica entrenada correctamente")
-            
-            # ================================================================
+            # ============================================================
             # ENTRENAR RED DINÁMICA
-            # ================================================================
-            logger.info("\n🧠 [2/2] Entrenando Red Siamesa Dinámica...")
+            # ============================================================
+            logger.info("\n🧠 Entrenando Red Siamesa Dinámica...")
             logger.info("-" * 80)
             
-            dyn_success = self.dynamic_network.train_with_real_data(self.database)
+            dynamic_result = self.dynamic_network.train_with_real_data(self.database)
             
-            if not dyn_success:
-                result['message'] = "Error entrenando red dinámica"
-                logger.error(result['message'])
-                return result
+            if dynamic_result['success']:
+                logger.info("✅ Red dinámica entrenada exitosamente")
+                result['dynamic_trained'] = True
+            else:
+                logger.error(f"❌ Error entrenando red dinámica: {dynamic_result.get('message', 'Error desconocido')}")
             
-            logger.info("✅ Red Dinámica entrenada correctamente")
+            # ============================================================
+            # RESULTADO FINAL
+            # ============================================================
+            both_trained = result['anatomical_trained'] and result['dynamic_trained']
             
-            training_time = time.time() - training_start
+            if both_trained:
+                self.state.networks_trained = True
+                self.state.last_training_time = time.strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Inicializar autenticación si no estaba activa
+                if not self.state.authentication_active:
+                    if self._initialize_real_authentication_system():
+                        self.state.authentication_active = True
+                        self.state.initialization_level = InitializationLevel.FULL_PIPELINE
+                
+                result['success'] = True
+                result['message'] = "Ambas redes entrenadas exitosamente"
+                logger.info("\n✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
+            else:
+                result['message'] = "Entrenamiento parcial o fallido"
+                logger.warning("\n⚠️ ENTRENAMIENTO INCOMPLETO")
             
-            # ================================================================
-            # ACTUALIZAR ESTADO Y ACTIVAR AUTENTICACIÓN
-            # ================================================================
-            self.state.networks_trained = True
-            self.state.bootstrap_mode = False
-            self.state.last_training_time = time.strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Inicializar autenticación si no estaba activa
-            if not self.state.authentication_active:
-                logger.info("\n🎯 Inicializando sistema de autenticación...")
-                if self._initialize_real_authentication_system():
-                    self.state.authentication_active = True
-                    self.state.initialization_level = InitializationLevel.FULL_PIPELINE
-                    logger.info("✅ Sistema de autenticación activado")
-            
-            result['success'] = True
-            result['message'] = "Entrenamiento completado exitosamente"
-            result['details'] = {
-                'training_time_seconds': round(training_time, 2),
-                'users_used': self.state.users_count,
-                'timestamp': self.state.last_training_time,
-                'anatomical_trained': True,
-                'dynamic_trained': True
-            }
-            
-            logger.info("=" * 80)
-            logger.info("✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
-            logger.info(f"⏱️  Tiempo total: {training_time:.2f}s")
-            logger.info(f"👥 Usuarios utilizados: {self.state.users_count}")
             logger.info("=" * 80)
             
             return result
             
         except Exception as e:
             result['message'] = f"Error durante entrenamiento: {str(e)}"
-            logger.error(result['message'], exc_info=True)
-            return result
-    
-    def get_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Obtiene información detallada de un usuario.
-        
-        Args:
-            user_id: ID del usuario
-        
-        Returns:
-            Dict con información del usuario o None si no existe
-        """
-        if not self.database:
-            return None
-        
-        try:
-            profile = self.database.get_user_profile(user_id)
-            if not profile:
-                return None
-            
-            # Obtener templates del usuario
-            templates = self.database.get_user_templates(user_id)
-            
-            return {
-                'user_id': profile.user_id,
-                'username': profile.username,
-                'gesture_sequence': profile.gesture_sequence,
-                'total_enrollments': profile.total_enrollments,
-                'templates_count': len(templates) if templates else 0,
-                'metadata': profile.metadata,
-                'created_at': profile.metadata.get('created_at', 'N/A')
-            }
-        except Exception as e:
-            logger.error(f"Error obteniendo info de usuario {user_id}: {e}")
-            return None
-    
-    def delete_user(self, user_id: str) -> Dict[str, Any]:
-        """
-        Elimina un usuario del sistema.
-        
-        Args:
-            user_id: ID del usuario a eliminar
-        
-        Returns:
-            Dict con resultado de la operación
-        """
-        result = {
-            'success': False,
-            'message': ''
-        }
-        
-        try:
-            if not self.database:
-                result['message'] = "Base de datos no inicializada"
-                return result
-            
-            # Verificar que el usuario existe
-            profile = self.database.get_user_profile(user_id)
-            if not profile:
-                result['message'] = f"Usuario {user_id} no encontrado"
-                return result
-            
-            # Eliminar usuario
-            success = self.database.delete_user(user_id)
-            
-            if success:
-                # Actualizar contador
-                self.state.users_count -= 1
-                
-                # Si caemos debajo de 2 usuarios, desactivar autenticación
-                if self.state.users_count < 2:
-                    self.state.networks_trained = False
-                    self.state.authentication_active = False
-                    self.state.bootstrap_mode = True
-                    logger.info("⚠️ Menos de 2 usuarios - Sistema en modo bootstrap")
-                
-                result['success'] = True
-                result['message'] = f"Usuario {user_id} eliminado correctamente"
-                logger.info(result['message'])
-            else:
-                result['message'] = "Error eliminando usuario"
-                logger.error(result['message'])
-            
-            return result
-            
-        except Exception as e:
-            result['message'] = f"Error: {str(e)}"
-            logger.error(f"Error eliminando usuario {user_id}: {e}")
+            logger.error(f"❌ Error en entrenamiento: {e}", exc_info=True)
             return result
     
     def cleanup_resources(self):
         """
-        Libera recursos del sistema (cámara, mediapipe).
+        Limpia recursos del sistema (cámara, MediaPipe, etc).
         """
         try:
-            logger.info("🧹 Liberando recursos del sistema...")
+            logger.info("\n🧹 Limpiando recursos del sistema...")
             
             # Liberar cámara
             try:

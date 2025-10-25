@@ -2643,6 +2643,21 @@ class RealEnrollmentSystem:
         logger.info(f"  - Config: {self.config.samples_per_gesture} muestras/gesto, umbral {self.config.quality_threshold}")
         logger.info(f"  - Bootstrap: {'ACTIVADO' if self.bootstrap_mode else 'DESACTIVADO'}")
 
+    def check_bootstrap_mode(self) -> bool:
+        """
+        Método público para verificar si el sistema está en modo bootstrap.
+        
+        Returns:
+            bool: True si está en modo bootstrap, False si no
+        """
+        try:
+            self.bootstrap_mode = self._check_bootstrap_needed()
+            logger.info(f"Bootstrap mode verificado: {'ACTIVO' if self.bootstrap_mode else 'DESACTIVADO'}")
+            return self.bootstrap_mode
+        except Exception as e:
+            logger.error(f"Error verificando bootstrap mode: {e}")
+            return False
+        
     def _check_bootstrap_needed(self) -> bool:
         """Verifica si necesitamos modo bootstrap."""
         try:
