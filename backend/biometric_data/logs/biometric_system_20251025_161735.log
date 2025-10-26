@@ -1,0 +1,135 @@
+2025-10-25 16:17:35,587 - biometric_gesture_system - INFO - [config_manager.py:504] - Validación de configuración: ✓ EXITOSA
+2025-10-25 16:17:35,587 - biometric_gesture_system - INFO - [config_manager.py:317] - ================================================================================
+2025-10-25 16:17:35,588 - biometric_gesture_system - INFO - [config_manager.py:318] - SISTEMA BIOMÉTRICO DE GESTOS DE MANOS - CONFIG MANAGER INICIALIZADO
+2025-10-25 16:17:35,588 - biometric_gesture_system - INFO - [config_manager.py:319] - ================================================================================
+2025-10-25 16:17:35,589 - biometric_gesture_system - INFO - [config_manager.py:320] - Configuración cargada desde: biometric_config.json
+2025-10-25 16:17:35,589 - biometric_gesture_system - INFO - [config_manager.py:321] - Muestras por gesto: 7
+2025-10-25 16:17:35,589 - biometric_gesture_system - INFO - [config_manager.py:322] - Gestos por usuario: 3
+2025-10-25 16:17:35,590 - biometric_gesture_system - INFO - [config_manager.py:323] - Umbral confianza mano: 0.9
+2025-10-25 16:17:35,590 - biometric_gesture_system - INFO - [config_manager.py:324] - Umbral confianza gesto: 0.6
+2025-10-25 16:17:35,590 - biometric_gesture_system - INFO - [config_manager.py:325] - Resolución cámara: 1280x720
+2025-10-25 16:17:35,590 - biometric_gesture_system - INFO - [config_manager.py:326] - Directorios creados: 11 rutas configuradas
+2025-10-25 16:17:35,591 - biometric_gesture_system - INFO - [config_manager.py:327] - ================================================================================
+2025-10-25 16:17:35,994 - biometric_gesture_system - INFO - [config_manager.py:630] - ======================================================================
+2025-10-25 16:17:35,994 - biometric_gesture_system - INFO - [config_manager.py:630] - ROI NORMALIZATION SYSTEM INICIALIZADO
+2025-10-25 16:17:35,994 - biometric_gesture_system - INFO - [config_manager.py:630] -   ✓ Resolución mínima: 150px
+2025-10-25 16:17:35,995 - biometric_gesture_system - INFO - [config_manager.py:630] -   ✓ Resolución máxima: 600px
+2025-10-25 16:17:35,995 - biometric_gesture_system - INFO - [config_manager.py:630] -   ✓ Tamaño normalizado: (224, 224)
+2025-10-25 16:17:35,995 - biometric_gesture_system - INFO - [config_manager.py:630] -   ✓ Padding: 15%
+2025-10-25 16:17:35,995 - biometric_gesture_system - INFO - [config_manager.py:630] -   ✓ Sharpening: ACTIVADO
+2025-10-25 16:17:35,995 - biometric_gesture_system - INFO - [config_manager.py:630] - ======================================================================
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [visual_feedback.py:62] - ======================================================================
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [visual_feedback.py:63] - VISUAL FEEDBACK MANAGER INICIALIZADO
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [visual_feedback.py:64] -   ✓ 5 niveles de feedback configurados
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [visual_feedback.py:65] -   ✓ Colores BGR definidos
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [visual_feedback.py:66] -   ✓ Sistema de priorización activo
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [visual_feedback.py:67] - ======================================================================
+2025-10-25 16:17:35,996 - biometric_gesture_system - INFO - [system_manager.py:147] - ================================================================================
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:148] - 🚀 BiometricSystemManager v2.0.0 Real Edition Iniciado
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:149] - 🏗️  Arquitectura: 15 Módulos + Main | 4 Capas Funcionales
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:150] - 🎯 Características: Redes siamesas, fusión multimodal, templates biométricos
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:151] - ================================================================================
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:203] - 
+================================================================================
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:204] - 🔧 INICIANDO INICIALIZACIÓN PROGRESIVA DEL SISTEMA
+2025-10-25 16:17:35,998 - biometric_gesture_system - INFO - [system_manager.py:205] - ================================================================================
+2025-10-25 16:17:35,999 - biometric_gesture_system - INFO - [system_manager.py:165] - VERIFICANDO MÓDULOS DEL SISTEMA...
+2025-10-25 16:17:35,999 - biometric_gesture_system - INFO - [system_manager.py:166] - ================================================================================
+2025-10-25 16:17:35,999 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ ConfigManager
+2025-10-25 16:17:35,999 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ CameraManager
+2025-10-25 16:17:36,000 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ MediaPipeProcessor
+2025-10-25 16:17:36,000 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ QualityValidator
+2025-10-25 16:17:36,000 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ ReferenceAreaManager
+2025-10-25 16:17:36,000 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ AnatomicalFeaturesExtractor
+2025-10-25 16:17:36,000 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealDynamicFeaturesExtractor
+2025-10-25 16:17:36,001 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ SequenceManager
+2025-10-25 16:17:36,001 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealSiameseAnatomicalNetwork
+2025-10-25 16:17:36,001 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealSiameseDynamicNetwork
+2025-10-25 16:17:36,001 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealFeaturePreprocessor
+2025-10-25 16:17:36,002 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealScoreFusionSystem
+2025-10-25 16:17:36,002 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ BiometricDatabase
+2025-10-25 16:17:36,002 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealEnrollmentSystem
+2025-10-25 16:17:36,002 - biometric_gesture_system - INFO - [system_manager.py:175] - ✅ RealAuthenticationSystem
+2025-10-25 16:17:36,002 - biometric_gesture_system - INFO - [system_manager.py:185] - 
+✅ TODOS LOS 15 MÓDULOS DISPONIBLES
+2025-10-25 16:17:36,003 - biometric_gesture_system - INFO - [system_manager.py:191] - ================================================================================
+2025-10-25 16:17:36,003 - biometric_gesture_system - INFO - [system_manager.py:218] - 
+🔧 NIVEL 1: Inicializando Componentes Básicos
+2025-10-25 16:17:36,003 - biometric_gesture_system - INFO - [system_manager.py:219] - --------------------------------------------------------------------------------
+2025-10-25 16:17:36,003 - biometric_gesture_system - INFO - [system_manager.py:310] - Inicializando Base de Datos...
+2025-10-25 16:17:36,036 - biometric_gesture_system - INFO - [system_manager.py:319] - ✅ Base de datos lista: 0 usuarios registrados
+2025-10-25 16:17:36,058 - biometric_gesture_system - INFO - [system_manager.py:332] - Inicializando Cámara...
+2025-10-25 16:17:47,085 - biometric_gesture_system - INFO - [system_manager.py:334] - ✅ Cámara (instancia global)
+2025-10-25 16:17:47,087 - biometric_gesture_system - INFO - [system_manager.py:339] - Inicializando MediaPipe...
+2025-10-25 16:17:47,375 - biometric_gesture_system - INFO - [system_manager.py:347] - ✅ MediaPipe
+2025-10-25 16:17:47,375 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: roi_normalization.enabled, usando default: True
+2025-10-25 16:17:47,376 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: roi_normalization.enabled, usando default: True
+2025-10-25 16:17:47,376 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: roi_normalization.use_single_area, usando default: True
+2025-10-25 16:17:47,376 - biometric_gesture_system - INFO - [system_manager.py:355] - ✅ Validadores de calidad
+2025-10-25 16:17:47,376 - biometric_gesture_system - INFO - [system_manager.py:228] - ✅ NIVEL 1 COMPLETADO: Componentes básicos listos
+
+2025-10-25 16:17:47,376 - biometric_gesture_system - INFO - [system_manager.py:233] - 📊 NIVEL 2: Inicializando Extractores de Características
+2025-10-25 16:17:47,376 - biometric_gesture_system - INFO - [system_manager.py:234] - --------------------------------------------------------------------------------
+2025-10-25 16:17:47,377 - biometric_gesture_system - INFO - [system_manager.py:382] -   Inicializando AnatomicalFeaturesExtractor...
+2025-10-25 16:17:47,377 - biometric_gesture_system - INFO - [system_manager.py:384] -   ✅ AnatomicalFeaturesExtractor inicializado
+2025-10-25 16:17:47,377 - biometric_gesture_system - INFO - [system_manager.py:389] -   Inicializando RealDynamicFeaturesExtractor...
+2025-10-25 16:17:47,377 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.dynamic_features, usando default: {'min_transition_frames': 8, 'max_transition_frames': 40, 'gesture_stability_threshold': 5, 'velocity_smoothing_window': 3, 'min_movement_threshold': 0.005, 'transition_detection_sensitivity': 0.85, 'temporal_downsampling': 1, 'normalize_temporal_features': True, 'use_3d_trajectories': True, 'velocity_threshold_percentile': 75, 'acceleration_smoothing': True, 'jerk_threshold': 0.1, 'minimum_sequence_duration_ms': 200}
+2025-10-25 16:17:47,377 - biometric_gesture_system - INFO - [system_manager.py:397] -   ✅ RealDynamicFeaturesExtractor inicializado
+2025-10-25 16:17:47,378 - biometric_gesture_system - INFO - [system_manager.py:402] -   Inicializando SequenceManager...
+2025-10-25 16:17:47,378 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.sequence_management, usando default: {'sequence_length': 3, 'max_sequence_duration': 60.0, 'max_gesture_duration': 15.0, 'min_gesture_confidence': 0.7, 'min_stable_frames': 3, 'gesture_timeout': 10.0, 'sequence_timeout': 45.0, 'max_failed_attempts': 3, 'cooldown_period': 5.0, 'auto_save_sequences': True, 'validation_mode': 'moderate', 'allow_gesture_skipping': False, 'require_exact_order': True, 'enable_adaptive_timeouts': True}
+2025-10-25 16:17:47,378 - biometric_gesture_system - INFO - [system_manager.py:404] -   ✅ SequenceManager inicializado
+2025-10-25 16:17:47,378 - biometric_gesture_system - INFO - [system_manager.py:409] - Inicializando Sistema de Enrollment...
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.samples_per_gesture, usando default: 8
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.min_confidence, usando default: 0.65
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.min_stability_frames, usando default: 8
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.require_all_gestures, usando default: True
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.sample_timeout, usando default: 120.0
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.session_timeout, usando default: 3600.0
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.capture_interval, usando default: 0.8
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.enable_quality_check, usando default: True
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.enable_duplicate_check, usando default: True
+2025-10-25 16:17:47,379 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.duplicate_threshold, usando default: 0.92
+2025-10-25 16:17:47,380 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.template_fusion_strategy, usando default: average
+2025-10-25 16:17:47,380 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.enable_template_optimization, usando default: True
+2025-10-25 16:17:47,380 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.embedding_dimension_check, usando default: True
+2025-10-25 16:17:47,380 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.show_preview, usando default: True
+2025-10-25 16:17:47,380 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.show_quality_feedback, usando default: False
+2025-10-25 16:17:47,382 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.enrollment.save_enrollment_video, usando default: False
+2025-10-25 16:17:47,382 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.siamese_anatomical, usando default: {'hidden_layers': [128, 64], 'activation': 'relu', 'dropout_rate': 0.2, 'batch_normalization': True, 'l2_regularization': 0.001, 'learning_rate': 0.001, 'batch_size': 32, 'epochs': 100, 'patience': 15, 'validation_split': 0.2, 'min_users_for_training': 2, 'min_samples_per_user': 15, 'max_samples_per_user': 50, 'min_sessions_per_user': 1, 'loss_function': 'contrastive', 'distance_metric': 'euclidean', 'margin': 1.5, 'alpha': 0.2, 'use_stratified_split': True, 'cross_validation_folds': 5, 'threshold_optimization': 'eer', 'quality_threshold': 80.0, 'use_real_augmentation': True, 'temporal_jitter': 0.02, 'noise_from_real_variance': True, 'require_independent_test': True, 'min_test_users': 1, 'performance_monitoring': True}
+2025-10-25 16:17:47,382 - biometric_gesture_system - WARNING - [config_manager.py:349] - Clave de configuración no encontrada: biometric.feature_preprocessing, usando default: {'anatomical_normalization': 'robust', 'dynamic_normalization': 'standard', 'normalize_per_user': False, 'balancing_method': 'balanced_subsample', 'target_balance_ratio': 1.0, 'augmentation_strategy': 'moderate', 'augmentation_factor': 1.5, 'cv_folds': 5, 'cv_strategy': 'stratified_user', 'test_size': 0.2, 'validation_size': 0.2, 'outlier_threshold': 3.0, 'min_samples_per_user': 5, 'feature_selection': False, 'variance_threshold': 0.01, 'cache_transformations': True, 'parallel_processing': False, 'random_state': 42, 'stratify_by_user': True}
+2025-10-25 16:17:47,383 - biometric_gesture_system - INFO - [system_manager.py:415] - 🚀 Modo Bootstrap detectado - Primeros usuarios
+2025-10-25 16:17:47,383 - biometric_gesture_system - INFO - [system_manager.py:418] - ✅ Sistema de enrollment listo
+2025-10-25 16:17:47,383 - biometric_gesture_system - INFO - [system_manager.py:244] - ✅ NIVEL 2 COMPLETADO: Extractores listos
+
+2025-10-25 16:17:47,384 - biometric_gesture_system - INFO - [system_manager.py:249] - 🧠 NIVEL 3: Verificando Redes Neuronales
+2025-10-25 16:17:47,384 - biometric_gesture_system - INFO - [system_manager.py:250] - --------------------------------------------------------------------------------
+2025-10-25 16:17:47,384 - biometric_gesture_system - INFO - [system_manager.py:432] - Verificando estado de redes neuronales...
+2025-10-25 16:17:47,384 - biometric_gesture_system - INFO - [system_manager.py:442] -   Red anatómica: ⚠️ No entrenada
+2025-10-25 16:17:47,385 - biometric_gesture_system - INFO - [system_manager.py:443] -   Red dinámica: ⚠️ No entrenada
+2025-10-25 16:17:47,385 - biometric_gesture_system - WARNING - [system_manager.py:450] - ⚠️ Las redes necesitan entrenamiento
+2025-10-25 16:17:47,385 - biometric_gesture_system - INFO - [system_manager.py:451] - 📝 Se requieren al menos 2 usuarios para entrenar
+2025-10-25 16:17:47,385 - biometric_gesture_system - WARNING - [system_manager.py:259] - ⚠️ NIVEL 3 PARCIAL: Redes necesitan entrenamiento
+2025-10-25 16:17:47,385 - biometric_gesture_system - INFO - [system_manager.py:260] - 📝 Usuarios actuales: 0
+2025-10-25 16:17:47,386 - biometric_gesture_system - INFO - [system_manager.py:261] - 📝 Mínimo requerido: 2 usuarios para entrenar
+2025-10-25 16:17:47,386 - biometric_gesture_system - INFO - [system_manager.py:266] - 🚀 MODO BOOTSTRAP ACTIVADO: Permitir enrollment sin redes
+
+2025-10-25 16:17:47,386 - biometric_gesture_system - INFO - [system_manager.py:271] - 🎯 NIVEL 4: Inicializando Pipeline Completo
+2025-10-25 16:17:47,386 - biometric_gesture_system - INFO - [system_manager.py:272] - --------------------------------------------------------------------------------
+2025-10-25 16:17:47,386 - biometric_gesture_system - WARNING - [system_manager.py:466] - ⚠️ Redes no entrenadas - Autenticación no disponible aún
+2025-10-25 16:17:47,386 - biometric_gesture_system - INFO - [system_manager.py:279] - ⚠️ NIVEL 4 PARCIAL: Enrollment disponible, autenticación pendiente
+
+2025-10-25 16:17:47,387 - biometric_gesture_system - INFO - [system_manager.py:481] - 
+================================================================================
+2025-10-25 16:17:47,387 - biometric_gesture_system - INFO - [system_manager.py:482] - 📊 RESUMEN DE INICIALIZACIÓN
+2025-10-25 16:17:47,387 - biometric_gesture_system - INFO - [system_manager.py:483] - ================================================================================
+2025-10-25 16:17:47,387 - biometric_gesture_system - INFO - [system_manager.py:484] -   🎯 Nivel alcanzado: NEURAL_NETWORKS
+2025-10-25 16:17:47,387 - biometric_gesture_system - INFO - [system_manager.py:485] -   👥 Usuarios registrados: 0
+2025-10-25 16:17:47,387 - biometric_gesture_system - INFO - [system_manager.py:486] -   🧠 Redes entrenadas: ⚠️ No
+2025-10-25 16:17:47,388 - biometric_gesture_system - INFO - [system_manager.py:487] -   📝 Enrollment: ✅ Activo
+2025-10-25 16:17:47,388 - biometric_gesture_system - INFO - [system_manager.py:488] -   🔐 Autenticación: ❌ Inactiva
+2025-10-25 16:17:47,388 - biometric_gesture_system - INFO - [system_manager.py:489] -   🚀 Bootstrap: ✅ Activo
+2025-10-25 16:17:47,389 - biometric_gesture_system - INFO - [system_manager.py:490] - ================================================================================
+
+2025-10-25 16:17:47,389 - biometric_gesture_system - INFO - [system_manager.py:284] - ================================================================================
+2025-10-25 16:17:47,389 - biometric_gesture_system - INFO - [system_manager.py:285] - ✅ SISTEMA INICIALIZADO CORRECTAMENTE
+2025-10-25 16:17:47,389 - biometric_gesture_system - INFO - [system_manager.py:286] - ================================================================================

@@ -203,8 +203,8 @@ class RealEnrollmentSession:
             if sample and sample.is_valid:
                 self.samples.append(sample)
                 self.successful_samples += 1
-                logger.info(f"✅ Muestra agregada: {sample.sample_id}")
-                logger.info(f"   Progreso: {self.successful_samples}/{self.total_samples_needed}")
+                print(f"✅ Muestra agregada: {sample.sample_id}")
+                print(f"   Progreso: {self.successful_samples}/{self.total_samples_needed}")
             else:
                 self.failed_samples += 1
                 logger.error(f"❌ Muestra inválida rechazada")
@@ -234,7 +234,7 @@ class RealQualityController:
         self.quality_validator = get_quality_validator()
         self.area_manager = get_reference_area_manager()
         
-        logger.info("RealQualityController inicializado")
+        print("RealQualityController inicializado")
     
     def validate_sample_quality(self, sample: RealEnrollmentSample, bootstrap_mode: bool = False) -> Tuple[bool, List[str]]:
         """
@@ -249,7 +249,7 @@ class RealQualityController:
         """
         try:
             mode_text = "BOOTSTRAP" if bootstrap_mode else "NORMAL"
-            logger.info(f"Validando calidad de muestra {sample.sample_id} (modo {mode_text})")
+            print(f"Validando calidad de muestra {sample.sample_id} (modo {mode_text})")
             
             errors = []
             
@@ -277,23 +277,23 @@ class RealQualityController:
             if sample.sample_type in [SampleType.DYNAMIC, SampleType.COMBINED]:
                 if sample.dynamic_features is None:
                     if bootstrap_mode:
-                        logger.info("Características dinámicas ausentes - OK en bootstrap")
+                        print("Características dinámicas ausentes - OK en bootstrap")
                     else:
                         errors.append("Faltan características dinámicas")
                 elif not self._validate_dynamic_features_real(sample.dynamic_features):
                     if bootstrap_mode:
-                        logger.info("Características dinámicas inválidas - tolerado en bootstrap")
+                        print("Características dinámicas inválidas - tolerado en bootstrap")
                     else:
                         errors.append("Características dinámicas inválidas")
             
             if bootstrap_mode:
-                logger.info("🔧 Bootstrap: NO validando embeddings")
+                print("🔧 Bootstrap: NO validando embeddings")
                 
                 if sample.anatomical_embedding is not None:
-                    logger.info("⚠️ Bootstrap tiene embedding anatómico")
+                    print("⚠️ Bootstrap tiene embedding anatómico")
                 
                 if sample.dynamic_embedding is not None:
-                    logger.info("⚠️ Bootstrap tiene embedding dinámico")
+                    print("⚠️ Bootstrap tiene embedding dinámico")
                     
             else:
                 if sample.anatomical_embedding is not None:
@@ -306,14 +306,14 @@ class RealQualityController:
                     if not self._validate_real_embedding(sample.dynamic_embedding, "dynamic"):
                         errors.append("Embedding dinámico inválido")
                 else:
-                    logger.info("Embedding dinámico ausente - OK")
+                    print("Embedding dinámico ausente - OK")
             
             is_valid = len(errors) == 0
             sample.is_valid = is_valid
             sample.validation_errors = errors
             
             if is_valid:
-                logger.info(f"✅ Muestra {sample.sample_id} validada exitosamente (modo {mode_text})")
+                print(f"✅ Muestra {sample.sample_id} validada exitosamente (modo {mode_text})")
             else:
                 logger.error(f"❌ Muestra {sample.sample_id} falló validación {mode_text}: {errors}")
             
@@ -490,7 +490,7 @@ class RealTemplateGenerator:
         
         self.preprocessor = get_real_feature_preprocessor()
         
-        logger.info("RealTemplateGenerator inicializado con redes entrenadas")
+        print("RealTemplateGenerator inicializado con redes entrenadas")
      
     def generate_real_templates(self, samples: List[RealEnrollmentSample], user_id: str, bootstrap_mode: bool = False) -> Dict[str, List[np.ndarray]]:
         """
@@ -506,7 +506,7 @@ class RealTemplateGenerator:
         """
         try:
             mode_text = "BOOTSTRAP" if bootstrap_mode else "NORMAL"
-            logger.info(f"Generando templates para {user_id} con {len(samples)} muestras (modo {mode_text})")
+            print(f"Generando templates para {user_id} con {len(samples)} muestras (modo {mode_text})")
             
             templates = {
                 'anatomical': [],
@@ -514,8 +514,8 @@ class RealTemplateGenerator:
             }
             
             if bootstrap_mode:
-                logger.info("MODO BOOTSTRAP: Guardando SIN embeddings")
-                logger.info("   Embeddings se generarán después del entrenamiento de redes")
+                print("MODO BOOTSTRAP: Guardando SIN embeddings")
+                print("   Embeddings se generarán después del entrenamiento de redes")
                 
                 valid_samples = [s for s in samples if s.is_valid]
                 
@@ -525,15 +525,15 @@ class RealTemplateGenerator:
                 for sample in valid_samples:
                     if sample.anatomical_features and sample.sample_type in [SampleType.ANATOMICAL, SampleType.COMBINED]:
                         anatomical_count += 1
-                        logger.info(f"Caracteristicas anatómicas guardadas: {sample.sample_id}")
+                        print(f"Caracteristicas anatómicas guardadas: {sample.sample_id}")
                     
                     if sample.dynamic_features and sample.sample_type in [SampleType.DYNAMIC, SampleType.COMBINED]:
                         dynamic_count += 1
-                        logger.info(f"Caracteristicas dinámicas guardadas: {sample.sample_id}")
+                        print(f"Caracteristicas dinámicas guardadas: {sample.sample_id}")
                 
-                logger.info(f"Bootstrap procesadas:")
-                logger.info(f"   Caracteristicas anatómicas: {anatomical_count}")
-                logger.info(f"   Caracteristicas dinámicas: {dynamic_count}")
+                print(f"Bootstrap procesadas:")
+                print(f"   Caracteristicas anatómicas: {anatomical_count}")
+                print(f"   Caracteristicas dinámicas: {dynamic_count}")
                 
                 return templates
             
@@ -546,7 +546,7 @@ class RealTemplateGenerator:
                 logger.error("Red dinámica no entrenada en modo normal - continuando solo anatomica")
             
             valid_samples = [s for s in samples if s.is_valid]
-            logger.info(f"Procesando {len(valid_samples)} muestras validas de {len(samples)} totales")
+            print(f"Procesando {len(valid_samples)} muestras validas de {len(samples)} totales")
 
             
             anatomical_count = 0
@@ -557,7 +557,7 @@ class RealTemplateGenerator:
                     if sample.anatomical_embedding is not None:
                         templates['anatomical'].append(sample.anatomical_embedding)
                         anatomical_count += 1
-                        logger.info(f"Embedding anatómico existente: {sample.sample_id}")
+                        print(f"Embedding anatómico existente: {sample.sample_id}")
                     else:
                         anatomical_embedding = self._generate_real_anatomical_embedding(
                             sample.anatomical_features, user_id, sample.sample_id
@@ -566,7 +566,7 @@ class RealTemplateGenerator:
                             templates['anatomical'].append(anatomical_embedding)
                             sample.anatomical_embedding = anatomical_embedding
                             anatomical_count += 1
-                            logger.info(f"Embedding anatómico generado: {sample.sample_id}")
+                            print(f"Embedding anatómico generado: {sample.sample_id}")
                         else:
                             logger.error(f"Error generando anatómico: {sample.sample_id}")
                 
@@ -576,16 +576,16 @@ class RealTemplateGenerator:
                     
                     if hasattr(sample, 'temporal_sequence') and sample.temporal_sequence is not None:
                         sample.dynamic_features.temporal_sequence = sample.temporal_sequence
-                        logger.info(f"Temporal sequence copiada: {len(sample.temporal_sequence)} frames")
+                        print(f"Temporal sequence copiada: {len(sample.temporal_sequence)} frames")
                     elif hasattr(sample, 'metadata') and isinstance(sample.metadata, dict):
                         if 'temporal_sequence' in sample.metadata and sample.metadata['temporal_sequence']:
                             sample.dynamic_features.temporal_sequence = np.array(sample.metadata['temporal_sequence'], dtype=np.float32)
-                            logger.info(f"Temporal sequence desde metadata")
+                            print(f"Temporal sequence desde metadata")
                     
                     if sample.dynamic_embedding is not None:
                         templates['dynamic'].append(sample.dynamic_embedding)
                         dynamic_count += 1
-                        logger.info(f"Embedding dinámico existente: {sample.sample_id}")
+                        print(f"Embedding dinámico existente: {sample.sample_id}")
                     else:
                         dynamic_embedding = self._generate_real_dynamic_embedding(
                             sample.dynamic_features, user_id, sample.sample_id
@@ -594,15 +594,15 @@ class RealTemplateGenerator:
                             templates['dynamic'].append(dynamic_embedding)
                             sample.dynamic_embedding = dynamic_embedding
                             dynamic_count += 1
-                            logger.info(f"Embedding dinámico generado: {sample.sample_id}")
+                            print(f"Embedding dinámico generado: {sample.sample_id}")
                         else:
-                            logger.info(f"No se pudo generar dinámico: {sample.sample_id}")
+                            print(f"No se pudo generar dinámico: {sample.sample_id}")
             
   
-            logger.info(f"Templates generados exitosamente (modo {mode_text}):")
-            logger.info(f"   Embeddings anatomicos REALES: {anatomical_count}")
-            logger.info(f"   Embeddings dinamicos REALES: {dynamic_count}")
-            logger.info(f"   Total templates: {len(templates['anatomical']) + len(templates['dynamic'])}")
+            print(f"Templates generados exitosamente (modo {mode_text}):")
+            print(f"   Embeddings anatomicos REALES: {anatomical_count}")
+            print(f"   Embeddings dinamicos REALES: {dynamic_count}")
+            print(f"   Total templates: {len(templates['anatomical']) + len(templates['dynamic'])}")
             
             return templates
             
@@ -613,7 +613,7 @@ class RealTemplateGenerator:
     def _generate_real_anatomical_embedding(self, features: AnatomicalFeatureVector, user_id: str, sample_id: str) -> Optional[np.ndarray]:
         """Genera embedding anatómico."""
         try:
-            logger.info(f"Generando embedding anatómico para {sample_id}")
+            print(f"Generando embedding anatómico para {sample_id}")
             
             if self.anatomical_network.base_network:
                 features_array = features.complete_vector.reshape(1, -1)
@@ -626,7 +626,7 @@ class RealTemplateGenerator:
                 embedding = self.anatomical_network.base_network.predict(features_array, verbose=0)[0]
                 
                 if self._validate_generated_embedding(embedding, "anatomical"):
-                    logger.info(f"Embedding anatómico generado: dim={embedding.shape[0]}, norm={np.linalg.norm(embedding):.3f}")
+                    print(f"Embedding anatómico generado: dim={embedding.shape[0]}, norm={np.linalg.norm(embedding):.3f}")
                     return embedding
                 else:
                     logger.error("Embedding anatomico generado es inválido")
@@ -645,7 +645,7 @@ class RealTemplateGenerator:
             log_msg = "Generando embedding dinámico"
             if sample_id:
                 log_msg += f" para {sample_id}"
-            logger.info(log_msg)
+            print(log_msg)
             
             if not self.dynamic_network.base_network:
                 logger.error("Red dinámica no disponible")
@@ -663,7 +663,7 @@ class RealTemplateGenerator:
             expected_seq_length = self.dynamic_network.sequence_length
             expected_feature_dim = self.dynamic_network.feature_dim
             
-            logger.info(f"Temporal sequence shape: {temporal_array.shape}")
+            print(f"Temporal sequence shape: {temporal_array.shape}")
             
             if temporal_array.shape[0] > expected_seq_length:
                 temporal_array = temporal_array[:expected_seq_length]
@@ -683,7 +683,7 @@ class RealTemplateGenerator:
             embedding = self.dynamic_network.base_network.predict(sequence, verbose=0)[0]
             
             if self._validate_generated_embedding(embedding, "dynamic"):
-                logger.info(f"Embedding dinámico generado: dim={embedding.shape[0]}, norm={np.linalg.norm(embedding):.3f}")
+                print(f"Embedding dinámico generado: dim={embedding.shape[0]}, norm={np.linalg.norm(embedding):.3f}")
                 return embedding
             else:
                 logger.error("Embedding dinámico inválido")
@@ -723,21 +723,21 @@ class RealTemplateGenerator:
     def optimize_real_templates(self, templates: Dict[str, List[np.ndarray]]) -> Dict[str, List[np.ndarray]]:
         """Mantiene templates individuales SIN fusión."""
         try:
-            logger.info("✅ Manteniendo templates individuales (SIN promediado)")
+            print("✅ Manteniendo templates individuales (SIN promediado)")
             
             optimized = {}
             
             for modality, embeddings in templates.items():
                 if not embeddings:
-                    logger.info(f"⚠️ No hay embeddings {modality}")
+                    print(f"⚠️ No hay embeddings {modality}")
                     continue
                 
                 optimized[modality] = embeddings
                 
-                logger.info(f"✅ {len(embeddings)} embeddings {modality} preservados")
-                logger.info(f"   Norma promedio: {np.mean([np.linalg.norm(e) for e in embeddings]):.3f}")
+                print(f"✅ {len(embeddings)} embeddings {modality} preservados")
+                print(f"   Norma promedio: {np.mean([np.linalg.norm(e) for e in embeddings]):.3f}")
             
-            logger.info(f"✅ Optimización completada: {len(optimized)} modalidades")
+            print(f"✅ Optimización completada: {len(optimized)} modalidades")
             return optimized
             
         except Exception as e:
@@ -786,7 +786,7 @@ class RealEnrollmentWorkflow:
         self.is_running = False
         self.frame_buffer = deque(maxlen=30)
         
-        logger.info("RealEnrollmentWorkflow inicializado")
+        print("RealEnrollmentWorkflow inicializado")
     
     def start_real_enrollment(self, user_id: str, username: str, 
                               gesture_sequence: List[str],
@@ -794,8 +794,8 @@ class RealEnrollmentWorkflow:
                               error_callback: Optional[Callable] = None) -> RealEnrollmentSession:
         """Inicia proceso de enrollment."""
         try:
-            logger.info(f"Iniciando enrollment para usuario {user_id}")
-            logger.info(f"  - Modo Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
+            print(f"Iniciando enrollment para usuario {user_id}")
+            print(f"  - Modo Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
             
             session = RealEnrollmentSession(
                 session_id=str(uuid.uuid4()),
@@ -831,11 +831,11 @@ class RealEnrollmentWorkflow:
             self.current_session = session
             self.is_running = True
             
-            logger.info(f"Enrollment iniciado: {session.session_id}")
-            logger.info(f"  - Gestos: {' → '.join(gesture_sequence)}")
-            logger.info(f"  - Muestras/gesto: {self.config.samples_per_gesture}")
-            logger.info(f"  - Total muestras: {session.total_samples_needed}")
-            logger.info(f"  - Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
+            print(f"Enrollment iniciado: {session.session_id}")
+            print(f"  - Gestos: {' → '.join(gesture_sequence)}")
+            print(f"  - Muestras/gesto: {self.config.samples_per_gesture}")
+            print(f"  - Total muestras: {session.total_samples_needed}")
+            print(f"  - Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
 
             if self.bootstrap_mode:
                 self.stats['bootstrap_enrollments'] = self.stats.get('bootstrap_enrollments', 0) + 1
@@ -853,7 +853,7 @@ class RealEnrollmentWorkflow:
     def _finalize_enrollment_session(self, session: RealEnrollmentSession) -> Dict[str, Any]:
         """Finaliza enrollment y genera templates."""
         try:
-            logger.info("Generando templates biométricos...")
+            print("Generando templates biométricos...")
             
             # Generar templates usando el workflow
             templates = self.workflow.template_generator.generate_real_templates(
@@ -862,7 +862,7 @@ class RealEnrollmentWorkflow:
                 self.bootstrap_mode
             )
             
-            logger.info(f"✅ {len(templates)} templates generados")
+            print(f"✅ {len(templates)} templates generados")
             
             # Guardar en base de datos
             for template in templates:
@@ -884,7 +884,7 @@ class RealEnrollmentWorkflow:
             
             self.database.store_user_profile(user_profile)
             
-            logger.info(f"✅ Usuario {session.user_id} registrado exitosamente")
+            print(f"✅ Usuario {session.user_id} registrado exitosamente")
             
             # Marcar sesión como completada
             session.status = EnrollmentStatus.COMPLETED
@@ -918,7 +918,7 @@ class RealEnrollmentWorkflow:
     def _initialize_real_components(self) -> bool:
         """Inicializa componentes para captura REAL."""
         try:
-            logger.info("Inicializando componentes")
+            print("Inicializando componentes")
             
             if not self.camera_manager.is_initialized:
                 if not self.camera_manager.initialize():
@@ -938,7 +938,7 @@ class RealEnrollmentWorkflow:
                 logger.error("Extractor dinámico no disponible")
                 return False
             
-            logger.info("Componentes inicializados")
+            print("Componentes inicializados")
             return True
             
         except Exception as e:
@@ -948,10 +948,10 @@ class RealEnrollmentWorkflow:
     def set_bootstrap_mode(self, enabled: bool):
         """Configura el modo bootstrap."""
         self.bootstrap_mode = enabled
-        logger.info(f"Bootstrap mode: {'ENABLED' if enabled else 'DISABLED'}")
+        print(f"Bootstrap mode: {'ENABLED' if enabled else 'DISABLED'}")
         
         if hasattr(self, 'quality_validator') and self.quality_validator:
-            logger.info("Quality validator configurado para bootstrap")
+            print("Quality validator configurado para bootstrap")
 
     def get_current_quality_assessment(self):
         """Obtiene el último quality assessment."""
@@ -986,31 +986,31 @@ class RealEnrollmentWorkflow:
             # 🆕 PASO 1: CAPTURAR FRAME ORIGINAL
             # ========================================================================
             
-            logger.info("=" * 70)
-            logger.info("ENROLLMENT: PROCESAMIENTO CON ROI")
-            logger.info("=" * 70)
+            print("=" * 70)
+            print("ENROLLMENT: PROCESAMIENTO CON ROI")
+            print("=" * 70)
             
             ret, frame_original = self.camera_manager.capture_frame()
             if not ret or frame_original is None:
-                logger.info("Frame no capturado")
+                print("Frame no capturado")
                 return None
             
             session.frames_processed += 1
-            logger.info(f"Frame #{session.frames_processed} capturado - Shape: {frame_original.shape}")
+            print(f"Frame #{session.frames_processed} capturado - Shape: {frame_original.shape}")
             
             # ========================================================================
             # 🆕 PASO 2: DETECCIÓN INICIAL CON MEDIAPIPE (obtener landmarks)
             # ========================================================================
             
-            logger.info("Procesando frame original...")
+            print("Procesando frame original...")
             processing_result_initial = self.mediapipe_processor.process_frame(frame_original)
             
             if not processing_result_initial or not processing_result_initial.hand_result or not processing_result_initial.hand_result.is_valid:
-                logger.info("No se detectó mano válida")
+                print("No se detectó mano válida")
                 return None
             
-            logger.info("✅ Mano detectada")
-            logger.info(f"Confianza: {processing_result_initial.hand_result.confidence:.3f}")
+            print("✅ Mano detectada")
+            print(f"Confianza: {processing_result_initial.hand_result.confidence:.3f}")
             
             # ========================================================================
             # 🆕 PASO 3: EXTRAER Y VALIDAR ROI
@@ -1018,9 +1018,9 @@ class RealEnrollmentWorkflow:
             
             roi_system = get_roi_normalization_system()
             
-            logger.info("=" * 70)
-            logger.info(f"EXTRAYENDO ROI - Gesto: {session.current_gesture}")
-            logger.info("=" * 70)
+            print("=" * 70)
+            print(f"EXTRAYENDO ROI - Gesto: {session.current_gesture}")
+            print("=" * 70)
             
             roi_result = roi_system.extract_and_validate_roi(
                 frame_original,
@@ -1029,33 +1029,33 @@ class RealEnrollmentWorkflow:
             )
 
             self.last_roi_result = roi_result
-            logger.info(f"🔍 ROI GUARDADO:")
-            logger.info(f"   - is_valid: {roi_result.is_valid}")
-            logger.info(f"   - roi_bbox: {getattr(roi_result, 'roi_bbox', 'NO EXISTE')}")
-            logger.info(f"   - roi_width: {getattr(roi_result, 'roi_width', 'NO EXISTE')}")
+            print(f"🔍 ROI GUARDADO:")
+            print(f"   - is_valid: {roi_result.is_valid}")
+            print(f"   - roi_bbox: {getattr(roi_result, 'roi_bbox', 'NO EXISTE')}")
+            print(f"   - roi_width: {getattr(roi_result, 'roi_width', 'NO EXISTE')}")
             
             # ========================================================================
             # 🆕 PASO 4: VALIDAR DISTANCIA DEL ROI
             # ========================================================================
             
             if not roi_result.is_valid:
-                logger.info("=" * 70)
-                logger.info(f"❌ ROI NO VÁLIDO")
-                logger.info(f"Estado: {roi_result.distance_status.value}")
-                logger.info(f"Mensaje: {roi_result.feedback_message}")
-                logger.info(f"Tamaño ROI: {roi_result.roi_width}px")
-                logger.info("=" * 70)
+                print("=" * 70)
+                print(f"❌ ROI NO VÁLIDO")
+                print(f"Estado: {roi_result.distance_status.value}")
+                print(f"Mensaje: {roi_result.feedback_message}")
+                print(f"Tamaño ROI: {roi_result.roi_width}px")
+                print("=" * 70)
                 
                 return None
             
-            logger.info("=" * 70)
-            logger.info("✅✅✅ ROI VÁLIDO - CAPTURANDO ✅✅✅")
-            logger.info(f"ROI dimensions: {roi_result.roi_width}x{roi_result.roi_height}px")
-            logger.info(f"Scaling factor: {roi_result.scaling_factor:.3f}x")
-            logger.info(f"Processing time: {roi_result.processing_time_ms:.2f}ms")
-            logger.info("=" * 70)
+            print("=" * 70)
+            print("✅✅✅ ROI VÁLIDO - CAPTURANDO ✅✅✅")
+            print(f"ROI dimensions: {roi_result.roi_width}x{roi_result.roi_height}px")
+            print(f"Scaling factor: {roi_result.scaling_factor:.3f}x")
+            print(f"Processing time: {roi_result.processing_time_ms:.2f}ms")
+            print("=" * 70)
             
-            logger.info("✅ Usando landmarks del frame ORIGINAL")
+            print("✅ Usando landmarks del frame ORIGINAL")
             
             processing_result = processing_result_initial
             hand_result = processing_result.hand_result
@@ -1071,14 +1071,14 @@ class RealEnrollmentWorkflow:
             reference_area = (reference_area_coords.x1, reference_area_coords.y1, 
                             reference_area_coords.x2, reference_area_coords.y2)
             
-            logger.info(f"🔍 PRE-VALIDACIÓN:")
-            logger.info(f"   - Gesto detectado: '{gesture_result.gesture_name if gesture_result else 'None'}'")
-            logger.info(f"   - Gesto esperado: '{session.current_gesture}'")
-            logger.info(f"   - Confianza gesto: {gesture_result.confidence if gesture_result else 0.0:.3f}")
-            logger.info(f"   - Confianza mano: {hand_result.confidence:.3f}")
-            logger.info(f"   - Frame: {session.frames_processed}")
-            logger.info(f"   - Modo Bootstrap: {self.bootstrap_mode}")
-            logger.info(f"   - ROI usado: {roi_result.roi_width}x{roi_result.roi_height}px")
+            print(f"🔍 PRE-VALIDACIÓN:")
+            print(f"   - Gesto detectado: '{gesture_result.gesture_name if gesture_result else 'None'}'")
+            print(f"   - Gesto esperado: '{session.current_gesture}'")
+            print(f"   - Confianza gesto: {gesture_result.confidence if gesture_result else 0.0:.3f}")
+            print(f"   - Confianza mano: {hand_result.confidence:.3f}")
+            print(f"   - Frame: {session.frames_processed}")
+            print(f"   - Modo Bootstrap: {self.bootstrap_mode}")
+            print(f"   - ROI usado: {roi_result.roi_width}x{roi_result.roi_height}px")
             
             quality_assessment = self.quality_validator.validate_complete_quality(
                 hand_landmarks=hand_result.landmarks,
@@ -1094,28 +1094,28 @@ class RealEnrollmentWorkflow:
                 self.current_quality_assessment = quality_assessment
             
             if quality_assessment:
-                logger.info(f"🔍 QUALITY ASSESSMENT:")
-                logger.info(f"   - ready_for_capture: {quality_assessment.ready_for_capture}")
-                logger.info(f"   - overall_valid: {quality_assessment.overall_valid}")
-                logger.info(f"   - quality_score: {quality_assessment.quality_score:.3f}")
-                logger.info(f"   - bootstrap_mode: {self.bootstrap_mode}")
+                print(f"🔍 QUALITY ASSESSMENT:")
+                print(f"   - ready_for_capture: {quality_assessment.ready_for_capture}")
+                print(f"   - overall_valid: {quality_assessment.overall_valid}")
+                print(f"   - quality_score: {quality_assessment.quality_score:.3f}")
+                print(f"   - bootstrap_mode: {self.bootstrap_mode}")
 
             
             if not quality_assessment or not quality_assessment.ready_for_capture:
-                logger.info(f"❌ NO LISTO - Esperando mejor calidad")
+                print(f"❌ NO LISTO - Esperando mejor calidad")
                 return None
             
             current_gesture_samples = [s for s in session.samples if s.gesture_name == session.current_gesture]
             sample_number = len(current_gesture_samples) + 1
             
-            logger.info("=" * 70)
-            logger.info(f"🎯 READY_FOR_CAPTURE = TRUE! CAPTURANDO")
-            logger.info(f"   - Gesto: {session.current_gesture}")
-            logger.info(f"   - Muestra #{sample_number}")
-            logger.info(f"   - Calidad: {quality_assessment.quality_score:.3f}")
-            logger.info(f"   - Modo bootstrap: {self.bootstrap_mode}")
-            logger.info(f"   - Procesando con ROI: {roi_result.roi_width}x{roi_result.roi_height}px → 224x224px")
-            logger.info("=" * 70)
+            print("=" * 70)
+            print(f"🎯 READY_FOR_CAPTURE = TRUE! CAPTURANDO")
+            print(f"   - Gesto: {session.current_gesture}")
+            print(f"   - Muestra #{sample_number}")
+            print(f"   - Calidad: {quality_assessment.quality_score:.3f}")
+            print(f"   - Modo bootstrap: {self.bootstrap_mode}")
+            print(f"   - Procesando con ROI: {roi_result.roi_width}x{roi_result.roi_height}px → 224x224px")
+            print("=" * 70)
             
             anatomical_features = None
             if hand_result.landmarks:
@@ -1127,7 +1127,7 @@ class RealEnrollmentWorkflow:
                     )
                     
                     if anatomical_features:
-                        logger.info(f"✅ Características anatómicas: {anatomical_features.complete_vector.shape}")
+                        print(f"✅ Características anatómicas: {anatomical_features.complete_vector.shape}")
                     else:
                         logger.error(f"❌ Error extrayendo anatómicas")
                         return None
@@ -1147,7 +1147,7 @@ class RealEnrollmentWorkflow:
                     world_landmarks=hand_result.world_landmarks
                 )
                 
-                logger.info(f"✅ Frame agregado al extractor dinámico. Buffer: {len(self.dynamic_extractor.temporal_buffer)}/50")
+                print(f"✅ Frame agregado al extractor dinámico. Buffer: {len(self.dynamic_extractor.temporal_buffer)}/50")
                 
             except Exception as e:
                 logger.error(f"❌ Error agregando frame: {e}")
@@ -1176,20 +1176,20 @@ class RealEnrollmentWorkflow:
                     )
                     
                     if dynamic_features:
-                        logger.info(f"✅ Características dinámicas: {dynamic_features.complete_vector.shape}")
+                        print(f"✅ Características dinámicas: {dynamic_features.complete_vector.shape}")
                     else:
-                        logger.info(f"⏳ Dinámicas: esperando más frames")
+                        print(f"⏳ Dinámicas: esperando más frames")
                     
                     temporal_sequence = self._extract_temporal_sequence_for_dynamic_network()
                     if temporal_sequence is not None:
-                        logger.info(f"✅ Secuencia temporal: {temporal_sequence.shape}")
+                        print(f"✅ Secuencia temporal: {temporal_sequence.shape}")
                     else:
-                        logger.info("⚠️ No se pudo extraer secuencia temporal")
+                        print("⚠️ No se pudo extraer secuencia temporal")
                             
                 except Exception as e:
                     logger.error(f"❌ Error dinámicas: {e}")
             else:
-                logger.info(f"⏳ Buffer: {len(self.dynamic_extractor.temporal_buffer)}/50")
+                print(f"⏳ Buffer: {len(self.dynamic_extractor.temporal_buffer)}/50")
             
             # =========================================================================
             # ✅ CREAR MUESTRA COMPLETA
@@ -1227,7 +1227,7 @@ class RealEnrollmentWorkflow:
                 sample.temporal_sequence = temporal_sequence
                 sample.sequence_length = len(temporal_sequence)
                 sample.has_temporal_data = True
-                logger.info(f"✅ SECUENCIA TEMPORAL: {len(temporal_sequence)} frames")
+                print(f"✅ SECUENCIA TEMPORAL: {len(temporal_sequence)} frames")
                 
                 sample.metadata['temporal_sequence'] = temporal_sequence.tolist()
                 sample.metadata['sequence_length'] = len(temporal_sequence)
@@ -1237,12 +1237,12 @@ class RealEnrollmentWorkflow:
                 sample.temporal_sequence = None
                 sample.sequence_length = 0
                 sample.has_temporal_data = False
-                logger.info(f"⏳ Sin secuencia temporal")
+                print(f"⏳ Sin secuencia temporal")
             
-            logger.info(f"✅ Muestra creada: {sample_id}")
+            print(f"✅ Muestra creada: {sample_id}")
             
             if self.bootstrap_mode:
-                logger.info(f"🔧 BOOTSTRAP: Guardando SIN embeddings")
+                print(f"🔧 BOOTSTRAP: Guardando SIN embeddings")
                 
                 sample.anatomical_embedding = None
                 sample.dynamic_embedding = None
@@ -1250,7 +1250,7 @@ class RealEnrollmentWorkflow:
                 
             else:
                 try:
-                    logger.info(f"🧠 NORMAL: Generando embeddings")
+                    print(f"🧠 NORMAL: Generando embeddings")
                     
                     if self.template_generator.anatomical_network.is_trained:
                         anatomical_embedding = self.template_generator._generate_real_anatomical_embedding(
@@ -1259,7 +1259,7 @@ class RealEnrollmentWorkflow:
                         sample.anatomical_embedding = anatomical_embedding
                         
                         if anatomical_embedding is not None:
-                            logger.info(f"✅ Embedding anatómico: {anatomical_embedding.shape}")
+                            print(f"✅ Embedding anatómico: {anatomical_embedding.shape}")
                         else:
                             logger.error(f"❌ Error generando embedding anatómico")
                             return None
@@ -1274,9 +1274,9 @@ class RealEnrollmentWorkflow:
                         sample.dynamic_embedding = dynamic_embedding
                         
                         if dynamic_embedding is not None:
-                            logger.info(f"✅ Embedding dinámico: {dynamic_embedding.shape}")
+                            print(f"✅ Embedding dinámico: {dynamic_embedding.shape}")
                         else:
-                            logger.info(f"⏳ Embedding dinámico pendiente")
+                            print(f"⏳ Embedding dinámico pendiente")
                     elif not self.template_generator.dynamic_network.is_trained:
                         logger.error(f"❌ Red dinámica no entrenada")
                     
@@ -1287,7 +1287,7 @@ class RealEnrollmentWorkflow:
                     return None
             
             try:
-                logger.info(f"🔍 Validando muestra...")
+                print(f"🔍 Validando muestra...")
                 
                 is_valid, validation_errors = self.quality_controller.validate_sample_quality(
                     sample, bootstrap_mode=self.bootstrap_mode
@@ -1301,7 +1301,7 @@ class RealEnrollmentWorkflow:
                     return None
                 
                 sample.is_valid = True
-                logger.info(f"✅ Muestra validada")
+                print(f"✅ Muestra validada")
                 
             except Exception as e:
                 logger.error(f"❌ Error validando muestra: {e}")
@@ -1315,34 +1315,34 @@ class RealEnrollmentWorkflow:
             
             # ✅✅✅ BLOQUE BOOTSTRAP MEJORADO ✅✅✅
             if self.bootstrap_mode:
-                logger.info("="*70)
-                logger.info("💾 BOOTSTRAP: Guardando muestra durante captura")
-                logger.info(f"   Usuario: {session.user_id}")
-                logger.info(f"   Gesto: {sample.gesture_name}")
-                logger.info(f"   Sample ID: {sample.sample_id}")
-                logger.info("="*70)
+                print("="*70)
+                print("💾 BOOTSTRAP: Guardando muestra durante captura")
+                print(f"   Usuario: {session.user_id}")
+                print(f"   Gesto: {sample.gesture_name}")
+                print(f"   Sample ID: {sample.sample_id}")
+                print("="*70)
                 
                 try:
                     # Verificar que hay características anatómicas
                     if sample.anatomical_features is None:
                         logger.error("❌ BOOTSTRAP: No hay anatomical_features")
                     else:
-                        logger.info(f"✅ BOOTSTRAP: anatomical_features OK - dim={len(sample.anatomical_features.complete_vector)}")
+                        print(f"✅ BOOTSTRAP: anatomical_features OK - dim={len(sample.anatomical_features.complete_vector)}")
                     
                     # Verificar database
                     if not hasattr(self, 'database') or self.database is None:
                         logger.error("❌ BOOTSTRAP: self.database NO EXISTE")
                     else:
-                        logger.info(f"✅ BOOTSTRAP: database OK - tipo={type(self.database).__name__}")
+                        print(f"✅ BOOTSTRAP: database OK - tipo={type(self.database).__name__}")
                     
                     # Verificar método
                     if not hasattr(self.database, 'enroll_template_bootstrap'):
                         logger.error("❌ BOOTSTRAP: método enroll_template_bootstrap NO EXISTE")
                         logger.error(f"   Métodos disponibles: {[m for m in dir(self.database) if not m.startswith('_')]}")
                     else:
-                        logger.info("✅ BOOTSTRAP: método enroll_template_bootstrap existe")
+                        print("✅ BOOTSTRAP: método enroll_template_bootstrap existe")
                     
-                    logger.info("🔄 BOOTSTRAP: Llamando a enroll_template_bootstrap()...")
+                    print("🔄 BOOTSTRAP: Llamando a enroll_template_bootstrap()...")
                     
                     template_id = self.database.enroll_template_bootstrap(
                         user_id=session.user_id,
@@ -1372,11 +1372,11 @@ class RealEnrollmentWorkflow:
                         }
                     )
                     
-                    logger.info(f"📊 BOOTSTRAP: enroll_template_bootstrap() retornó: {template_id}")
+                    print(f"📊 BOOTSTRAP: enroll_template_bootstrap() retornó: {template_id}")
                     
                     if template_id:
-                        logger.info(f"✅ BOOTSTRAP: Muestra guardada exitosamente")
-                        logger.info(f"   Template ID: {template_id}")
+                        print(f"✅ BOOTSTRAP: Muestra guardada exitosamente")
+                        print(f"   Template ID: {template_id}")
                         sample.template_id = template_id
                         
                         # Verificar inmediatamente
@@ -1384,7 +1384,7 @@ class RealEnrollmentWorkflow:
                         time_sleep(0.1)
                         
                         templates_verificacion = self.database.list_user_templates(session.user_id)
-                        logger.info(f"📊 BOOTSTRAP: Verificación - {len(templates_verificacion)} templates totales para {session.user_id}")
+                        print(f"📊 BOOTSTRAP: Verificación - {len(templates_verificacion)} templates totales para {session.user_id}")
                         
                     else:
                         logger.error("❌ BOOTSTRAP: enroll_template_bootstrap retornó None/False")
@@ -1404,25 +1404,25 @@ class RealEnrollmentWorkflow:
                     import traceback
                     logger.error(traceback.format_exc())
 
-            logger.info("=" * 70)
-            logger.info(f"🎉 MUESTRA AGREGADA CON ROI!")
-            logger.info(f"   📝 ID: {sample_id}")
-            logger.info(f"   🤚 Gesto: {session.current_gesture}")
-            logger.info(f"   📊 Progreso: {session.successful_samples}/{session.total_samples_needed}")
-            logger.info(f"   📈 Porcentaje: {session.progress_percentage:.1f}%")
-            logger.info(f"   🔧 Bootstrap: {self.bootstrap_mode}")
-            logger.info(f"   🧠 Embeddings: {'No (Bootstrap)' if self.bootstrap_mode else 'Sí (Normal)'}")
-            logger.info(f"   ⏱️ Datos temporales: {'Sí' if sample.has_temporal_data else 'No'}")
-            logger.info(f"   🎯 ROI: {roi_result.roi_width}x{roi_result.roi_height}px")
-            logger.info("=" * 70)
+            print("=" * 70)
+            print(f"🎉 MUESTRA AGREGADA CON ROI!")
+            print(f"   📝 ID: {sample_id}")
+            print(f"   🤚 Gesto: {session.current_gesture}")
+            print(f"   📊 Progreso: {session.successful_samples}/{session.total_samples_needed}")
+            print(f"   📈 Porcentaje: {session.progress_percentage:.1f}%")
+            print(f"   🔧 Bootstrap: {self.bootstrap_mode}")
+            print(f"   🧠 Embeddings: {'No (Bootstrap)' if self.bootstrap_mode else 'Sí (Normal)'}")
+            print(f"   ⏱️ Datos temporales: {'Sí' if sample.has_temporal_data else 'No'}")
+            print(f"   🎯 ROI: {roi_result.roi_width}x{roi_result.roi_height}px")
+            print("=" * 70)
             
             if session.is_current_gesture_complete(self.config.samples_per_gesture):
-                logger.info(f"🎉 GESTO '{session.current_gesture}' COMPLETADO!")
+                print(f"🎉 GESTO '{session.current_gesture}' COMPLETADO!")
                 
                 if session.advance_to_next_gesture():
-                    logger.info(f"➡️ Siguiente: {session.current_gesture}")
+                    print(f"➡️ Siguiente: {session.current_gesture}")
                 else:
-                    logger.info(f"🏁 ENROLLMENT COMPLETADO!")
+                    print(f"🏁 ENROLLMENT COMPLETADO!")
                     session.status = EnrollmentStatus.COMPLETED
                     
                     if self.bootstrap_mode:
@@ -1502,7 +1502,7 @@ class RealEnrollmentWorkflow:
             if len(temporal_sequence) > 50:
                 temporal_sequence = temporal_sequence[-50:]
             
-            logger.info(f"Secuencia temporal extraída: {temporal_sequence.shape}")
+            print(f"Secuencia temporal extraída: {temporal_sequence.shape}")
             return temporal_sequence
             
         except Exception as e:
@@ -1579,7 +1579,7 @@ class RealEnrollmentWorkflow:
             )
             
             if dynamic_features and self._validate_real_dynamic_features(dynamic_features):
-                logger.info(f"Características dinámicas extraídas: dim={dynamic_features.complete_vector.shape[0]}")
+                print(f"Características dinámicas extraídas: dim={dynamic_features.complete_vector.shape[0]}")
                 return dynamic_features
             else:
                 logger.error("Error extrayendo características dinámicas")
@@ -1622,10 +1622,10 @@ class RealEnrollmentWorkflow:
             if session.current_gesture_index < len(session.gesture_sequence):
                 # Siguiente gesto
                 session.current_gesture = session.gesture_sequence[session.current_gesture_index]
-                logger.info(f"Avanzando al gesto: {session.current_gesture}")
+                print(f"Avanzando al gesto: {session.current_gesture}")
             else:
                 # Secuencia completada
-                logger.info("Secuencia de gestos completada - iniciando generación de templates")
+                print("Secuencia de gestos completada - iniciando generación de templates")
                 session.current_phase = EnrollmentPhase.TEMPLATE_GENERATION
                 session.status = EnrollmentStatus.GENERATING_TEMPLATES
                 
@@ -1647,11 +1647,11 @@ class RealEnrollmentWorkflow:
                 self.status = EnrollmentStatus.COMPLETED
                 self.current_phase = EnrollmentPhase.ENROLLMENT_COMPLETE
                 self.end_time = time.time()
-                logger.info("🎉 ENROLLMENT COMPLETADO!")
+                print("🎉 ENROLLMENT COMPLETADO!")
                 return False
             else:
                 self.current_gesture = self.gesture_sequence[self.current_gesture_index]
-                logger.info(f"🔄 Cambiando al siguiente gesto: {self.current_gesture} ({self.current_gesture_index + 1}/{len(self.gesture_sequence)})")
+                print(f"🔄 Cambiando al siguiente gesto: {self.current_gesture} ({self.current_gesture_index + 1}/{len(self.gesture_sequence)})")
                 return True
         except Exception as e:
             logger.error(f"Error en advance_to_next_gesture: {e}")
@@ -1665,16 +1665,16 @@ class RealEnrollmentWorkflow:
         #Finaliza el enrollment generando templates finales.
         try:
             # ✅ LOG 1: Inicio
-            logger.info("="*70)
-            logger.info(f"🔄 _finalize_real_enrollment INICIADO")
-            logger.info(f"   Usuario: {session.user_id}")
-            logger.info(f"   Total muestras en sesión: {len(session.samples)}")
-            logger.info("="*70)
+            print("="*70)
+            print(f"🔄 _finalize_real_enrollment INICIADO")
+            print(f"   Usuario: {session.user_id}")
+            print(f"   Total muestras en sesión: {len(session.samples)}")
+            print("="*70)
             
             # ✅ LOG 2: Filtrar válidas
-            logger.info(f"🔍 Filtrando muestras válidas...")
+            print(f"🔍 Filtrando muestras válidas...")
             valid_samples = [s for s in session.samples if s.is_valid]
-            logger.info(f"✅ Muestras válidas: {len(valid_samples)}/{len(session.samples)}")
+            print(f"✅ Muestras válidas: {len(valid_samples)}/{len(session.samples)}")
             
             if len(valid_samples) < self.config.min_samples_per_gesture:
                 logger.error(f"❌ Insuficientes muestras válidas: {len(valid_samples)} < {self.config.min_samples_per_gesture}")
@@ -1689,16 +1689,16 @@ class RealEnrollmentWorkflow:
             session_is_bootstrap = getattr(session, 'is_bootstrap', False)
             system_bootstrap_mode = getattr(self, 'bootstrap_mode', False)
             
-            logger.info("="*70)
-            logger.info("🔍 VERIFICANDO MODO DE OPERACIÓN")
-            logger.info(f"   session.is_bootstrap: {session_is_bootstrap}")
-            logger.info(f"   self.bootstrap_mode: {system_bootstrap_mode}")
-            logger.info(f"   - Condicion original: {session_is_bootstrap or system_bootstrap_mode}")
-            logger.info("="*70)
+            print("="*70)
+            print("🔍 VERIFICANDO MODO DE OPERACIÓN")
+            print(f"   session.is_bootstrap: {session_is_bootstrap}")
+            print(f"   self.bootstrap_mode: {system_bootstrap_mode}")
+            print(f"   - Condicion original: {session_is_bootstrap or system_bootstrap_mode}")
+            print("="*70)
             
             # ✅ LOG 4: Verificar redes
             try:
-                logger.info("🔍 Verificando estado de redes neuronales...")
+                print("🔍 Verificando estado de redes neuronales...")
                 
                 anatomical_network = get_real_siamese_anatomical_network()
                 dynamic_network = get_real_siamese_dynamic_network()
@@ -1706,33 +1706,33 @@ class RealEnrollmentWorkflow:
                 anatomical_trained = getattr(anatomical_network, 'is_trained', False)
                 dynamic_trained = getattr(dynamic_network, 'is_trained', False)
                 
-                logger.info(f"📊 Estado de redes:")
-                logger.info(f"   Red anatómica entrenada: {anatomical_trained}")
-                logger.info(f"   Red dinámica entrenada: {dynamic_trained}")
+                print(f"📊 Estado de redes:")
+                print(f"   Red anatómica entrenada: {anatomical_trained}")
+                print(f"   Red dinámica entrenada: {dynamic_trained}")
                 
                 if anatomical_trained and dynamic_trained:
-                    logger.info("✅ REDES ENTRENADAS - MODO NORMAL")
+                    print("✅ REDES ENTRENADAS - MODO NORMAL")
                     use_bootstrap_mode = False
                 elif anatomical_trained or dynamic_trained:
-                    logger.info("⚠️ REDES PARCIALMENTE ENTRENADAS - MODO NORMAL")
+                    print("⚠️ REDES PARCIALMENTE ENTRENADAS - MODO NORMAL")
                     use_bootstrap_mode = False
                 else:
-                    logger.info("🔧 REDES NO ENTRENADAS - VERIFICANDO BOOTSTRAP")
+                    print("🔧 REDES NO ENTRENADAS - VERIFICANDO BOOTSTRAP")
                     use_bootstrap_mode = session_is_bootstrap or system_bootstrap_mode
                     
             except Exception as e:
                 logger.error(f"❌ Error verificando redes: {e}")
                 use_bootstrap_mode = False
-                logger.info("⚠️ ERROR - FORZANDO MODO NORMAL")
+                print("⚠️ ERROR - FORZANDO MODO NORMAL")
             
             # ✅ LOG 5: Decisión final
-            logger.info("="*70)
-            logger.info(f"🎯 DECISIÓN FINAL: {'BOOTSTRAP' if use_bootstrap_mode else 'NORMAL'}")
-            logger.info("="*70)
+            print("="*70)
+            print(f"🎯 DECISIÓN FINAL: {'BOOTSTRAP' if use_bootstrap_mode else 'NORMAL'}")
+            print("="*70)
             
             if use_bootstrap_mode:
-                logger.info("🔧 MODO BOOTSTRAP ACTIVO")
-                logger.info("💾 GUARDANDO PERFIL Y TEMPLATES...")
+                print("🔧 MODO BOOTSTRAP ACTIVO")
+                print("💾 GUARDANDO PERFIL Y TEMPLATES...")
                 
                 # ✅ PASO 1: GUARDAR PERFIL
                 user_profile = UserProfile(
@@ -1754,31 +1754,31 @@ class RealEnrollmentWorkflow:
                 user_profile.total_enrollments = 1
                 user_profile.updated_at = time.time()
                 
-                logger.info(f"🔄 Guardando perfil para {session.user_id}...")
+                print(f"🔄 Guardando perfil para {session.user_id}...")
                 profile_saved = self.database.store_user_profile(user_profile)
-                logger.info(f"📊 store_user_profile retornó: {profile_saved}")
+                print(f"📊 store_user_profile retornó: {profile_saved}")
                 
                 if not profile_saved:
                     logger.error(f"❌ Error guardando perfil bootstrap")
                     session.status = EnrollmentStatus.FAILED
                     return
                 
-                logger.info(f"✅ Perfil bootstrap guardado: {session.user_id}")
+                print(f"✅ Perfil bootstrap guardado: {session.user_id}")
                 
                 # ✅ PASO 2: GUARDAR TEMPLATES ANATÓMICOS Y DINÁMICOS
-                logger.info("="*70)
-                logger.info("💾 GUARDANDO TEMPLATES BOOTSTRAP")
-                logger.info(f"   Total muestras válidas: {len(valid_samples)}")
-                logger.info("="*70)
+                print("="*70)
+                print("💾 GUARDANDO TEMPLATES BOOTSTRAP")
+                print(f"   Total muestras válidas: {len(valid_samples)}")
+                print("="*70)
                 
                 templates_saved = 0
                 for i, sample in enumerate(valid_samples):
-                    logger.info(f"💾 Procesando muestra {i+1}/{len(valid_samples)}")
-                    logger.info(f"   Sample ID: {sample.sample_id}")
-                    logger.info(f"   Gesto: {sample.gesture_name}")
-                    logger.info(f"   Tiene anatómicas: {sample.anatomical_features is not None}")
-                    logger.info(f"   Tiene dinámicas: {sample.dynamic_features is not None}")
-                    logger.info(f"   Tiene temporal: {sample.has_temporal_data}")
+                    print(f"💾 Procesando muestra {i+1}/{len(valid_samples)}")
+                    print(f"   Sample ID: {sample.sample_id}")
+                    print(f"   Gesto: {sample.gesture_name}")
+                    print(f"   Tiene anatómicas: {sample.anatomical_features is not None}")
+                    print(f"   Tiene dinámicas: {sample.dynamic_features is not None}")
+                    print(f"   Tiene temporal: {sample.has_temporal_data}")
                     
                     # ✅ GUARDAR TEMPLATE ANATÓMICO
                     if sample.anatomical_features is None:
@@ -1813,7 +1813,7 @@ class RealEnrollmentWorkflow:
                             
                             if template_id:
                                 templates_saved += 1
-                                logger.info(f"   ✅ Template ANATÓMICO guardado: {template_id}")
+                                print(f"   ✅ Template ANATÓMICO guardado: {template_id}")
                             else:
                                 logger.error(f"   ❌ enroll_template_bootstrap retornó None para anatómico")
                                 
@@ -1828,7 +1828,7 @@ class RealEnrollmentWorkflow:
                     
                     # ✅ GUARDAR TEMPLATE DINÁMICO SI EXISTE
                     if sample.dynamic_features and sample.temporal_sequence is not None and sample.has_temporal_data:
-                        logger.info(f"   🔄 Guardando template DINÁMICO...")
+                        print(f"   🔄 Guardando template DINÁMICO...")
                         try:
                             dynamic_template_id = self.database.enroll_template_bootstrap(
                                 user_id=session.user_id,
@@ -1858,7 +1858,7 @@ class RealEnrollmentWorkflow:
                             
                             if dynamic_template_id:
                                 templates_saved += 1
-                                logger.info(f"   ✅ Template DINÁMICO guardado: {dynamic_template_id}")
+                                print(f"   ✅ Template DINÁMICO guardado: {dynamic_template_id}")
                             else:
                                 logger.error(f"   ❌ enroll_template_bootstrap retornó None para dinámico")
                                 
@@ -1867,12 +1867,12 @@ class RealEnrollmentWorkflow:
                             import traceback
                             logger.error(traceback.format_exc())
                     else:
-                        logger.info(f"   ⏭️ Sin datos dinámicos para esta muestra")
+                        print(f"   ⏭️ Sin datos dinámicos para esta muestra")
                 
-                logger.info("="*70)
-                logger.info(f"📊 BOOTSTRAP: Templates guardados: {templates_saved}/{len(valid_samples)*2}")
-                logger.info(f"   (Esperados: anatómicos + dinámicos)")
-                logger.info("="*70)
+                print("="*70)
+                print(f"📊 BOOTSTRAP: Templates guardados: {templates_saved}/{len(valid_samples)*2}")
+                print(f"   (Esperados: anatómicos + dinámicos)")
+                print("="*70)
                 
                 if templates_saved == 0:
                     logger.error("❌ NO SE GUARDÓ NINGÚN TEMPLATE")
@@ -1885,17 +1885,17 @@ class RealEnrollmentWorkflow:
                 
                 verify_user = self.database.get_user(session.user_id)
                 if verify_user:
-                    logger.info(f"✅ VERIFICADO: Usuario {session.user_id} existe en BD")
-                    logger.info(f"   Username: {verify_user.username}")
+                    print(f"✅ VERIFICADO: Usuario {session.user_id} existe en BD")
+                    print(f"   Username: {verify_user.username}")
                     
                     templates_verificacion = self.database.list_user_templates(session.user_id)
-                    logger.info(f"✅ VERIFICADO: {len(templates_verificacion)} templates en BD")
+                    print(f"✅ VERIFICADO: {len(templates_verificacion)} templates en BD")
                     
                     # Contar anatómicos y dinámicos
                     anatomical_count = len([t for t in templates_verificacion if 'anatomical' in t])
                     dynamic_count = len([t for t in templates_verificacion if 'dynamic' in t])
-                    logger.info(f"   - Anatómicos: {anatomical_count}")
-                    logger.info(f"   - Dinámicos: {dynamic_count}")
+                    print(f"   - Anatómicos: {anatomical_count}")
+                    print(f"   - Dinámicos: {dynamic_count}")
                     
                     if len(templates_verificacion) == 0:
                         logger.error("❌ CRÍTICO: Usuario existe pero NO HAY TEMPLATES")
@@ -1910,16 +1910,16 @@ class RealEnrollmentWorkflow:
                 session.current_phase = EnrollmentPhase.ENROLLMENT_COMPLETE
                 session.end_time = time.time()
                 
-                logger.info("="*70)
-                logger.info(f"✅ Enrollment BOOTSTRAP completado: {session.user_id}")
-                logger.info(f"  - Duración: {session.duration:.1f}s")
-                logger.info(f"  - Muestras totales: {len(session.samples)}")
-                logger.info(f"  - Muestras válidas: {len(valid_samples)}")
-                logger.info(f"  - Perfil guardado: ✅")
-                logger.info(f"  - Templates guardados: {templates_saved}")
-                logger.info(f"    * Anatómicos: {anatomical_count}")
-                logger.info(f"    * Dinámicos: {dynamic_count}")
-                logger.info("="*70)
+                print("="*70)
+                print(f"✅ Enrollment BOOTSTRAP completado: {session.user_id}")
+                print(f"  - Duración: {session.duration:.1f}s")
+                print(f"  - Muestras totales: {len(session.samples)}")
+                print(f"  - Muestras válidas: {len(valid_samples)}")
+                print(f"  - Perfil guardado: ✅")
+                print(f"  - Templates guardados: {templates_saved}")
+                print(f"    * Anatómicos: {anatomical_count}")
+                print(f"    * Dinámicos: {dynamic_count}")
+                print("="*70)
                 
                 if session.progress_callback:
                     session.progress_callback(100.0)
@@ -1927,33 +1927,34 @@ class RealEnrollmentWorkflow:
                 return
             
             # ✅ LOG 6: Modo NORMAL
-            logger.info("="*70)
-            logger.info("🧠 MODO NORMAL ACTIVO")
-            logger.info("🔄 Generando templates biométricos...")
-            logger.info("="*70)
+            print("="*70)
+            print("🧠 MODO NORMAL ACTIVO")
+            print("🔄 Generando templates biométricos...")
+            print("="*70)
             
             session.current_phase = EnrollmentPhase.TEMPLATE_GENERATION
             
             # ✅ LOG 7: Verificar template_generator
             if not hasattr(self, 'template_generator'):
                 logger.error("❌ template_generator NO EXISTE")
-                logger.info("🔧 Creando BasicTemplateGenerator...")
+                print("🔧 Creando BasicTemplateGenerator...")
                 self.template_generator = self._create_basic_template_generator()
-                logger.info("✅ BasicTemplateGenerator creado")
+                print("✅ BasicTemplateGenerator creado")
             else:
-                logger.info("✅ template_generator ya existe")
+                print("✅ template_generator ya existe")
             
             # ✅ LOG 8: Generar templates
-            logger.info("🔄 Llamando a template_generator.generate_real_templates()...")
-            logger.info(f"   Entrada: {len(valid_samples)} muestras válidas")
-            logger.info(f"   Usuario: {session.user_id}")
+            print("🔄 Llamando a template_generator.generate_real_templates()...")
+            print(f"   Entrada: {len(valid_samples)} muestras válidas")
+            print(f"   Usuario: {session.user_id}")
             
             templates = self.template_generator.generate_real_templates(valid_samples, session.user_id)
             
-            logger.info(f"✅ generate_real_templates() completado")
-            logger.info(f"   Templates anatómicos generados: {len(templates.get('anatomical', []))}")
-            logger.info(f"   Templates dinámicos generados: {len(templates.get('dynamic', []))}")
+            print(f"✅ generate_real_templates() completado")
+            print(f"   Templates anatómicos generados: {len(templates.get('anatomical', []))}")
+            print(f"   Templates dinámicos generados: {len(templates.get('dynamic', []))}")
             
+
             if not templates['anatomical'] and not templates['dynamic']:
                 logger.error("❌ NO SE GENERARON TEMPLATES")
                 logger.error("   Templates anatómicos: 0")
@@ -1966,44 +1967,44 @@ class RealEnrollmentWorkflow:
                 return
             
             # ✅ LOG 9: Optimizar templates
-            logger.info("🔄 Llamando a template_generator.optimize_real_templates()...")
+            print("🔄 Llamando a template_generator.optimize_real_templates()...")
             
             optimized_templates = self.template_generator.optimize_real_templates(templates)
             
-            logger.info(f"✅ optimize_real_templates() completado")
-            logger.info(f"   Templates anatómicos optimizados: {len(optimized_templates.get('anatomical', []))}")
-            logger.info(f"   Templates dinámicos optimizados: {len(optimized_templates.get('dynamic', []))}")
+            print(f"✅ optimize_real_templates() completado")
+            print(f"   Templates anatómicos optimizados: {len(optimized_templates.get('anatomical', []))}")
+            print(f"   Templates dinámicos optimizados: {len(optimized_templates.get('dynamic', []))}")
             
             if optimized_templates.get('anatomical'):
                 avg_norm_anat = np.mean([np.linalg.norm(e) for e in optimized_templates['anatomical']])
-                logger.info(f"   Norma promedio anatómica: {avg_norm_anat:.3f}")
+                print(f"   Norma promedio anatómica: {avg_norm_anat:.3f}")
             
             if optimized_templates.get('dynamic'):
                 avg_norm_dyn = np.mean([np.linalg.norm(e) for e in optimized_templates['dynamic']])
-                logger.info(f"   Norma promedio dinámica: {avg_norm_dyn:.3f}")
+                print(f"   Norma promedio dinámica: {avg_norm_dyn:.3f}")
             
             # ✅ LOG 10: Preparar guardado
             session.current_phase = EnrollmentPhase.DATABASE_STORAGE
             session.status = EnrollmentStatus.STORING_DATA
             
-            logger.info("="*70)
-            logger.info("💾 PREPARANDO ALMACENAMIENTO EN BASE DE DATOS")
-            logger.info(f"   Usuario: {session.user_id}")
-            logger.info(f"   Username: {session.username}")
-            logger.info(f"   Templates a guardar: {sum(len(v) for v in optimized_templates.values() if isinstance(v, list))}")
-            logger.info("="*70)
+            print("="*70)
+            print("💾 PREPARANDO ALMACENAMIENTO EN BASE DE DATOS")
+            print(f"   Usuario: {session.user_id}")
+            print(f"   Username: {session.username}")
+            print(f"   Templates a guardar: {sum(len(v) for v in optimized_templates.values() if isinstance(v, list))}")
+            print("="*70)
             
             # ✅ LOG 11: LLAMAR A _store_real_user_data
-            logger.info("🔄 LLAMANDO A _store_real_user_data()...")
+            print("🔄 LLAMANDO A _store_real_user_data()...")
             
             store_result = self._store_real_user_data(session, optimized_templates)
             
-            logger.info(f"📊 _store_real_user_data() retornó: {store_result}")
+            print(f"📊 _store_real_user_data() retornó: {store_result}")
             
             if store_result:
-                logger.info("="*70)
-                logger.info("✅ ALMACENAMIENTO EXITOSO")
-                logger.info("="*70)
+                print("="*70)
+                print("✅ ALMACENAMIENTO EXITOSO")
+                print("="*70)
                 
                 session.status = EnrollmentStatus.COMPLETED
                 session.current_phase = EnrollmentPhase.ENROLLMENT_COMPLETE
@@ -2011,13 +2012,13 @@ class RealEnrollmentWorkflow:
                 
                 total_templates = sum(len(v) for v in optimized_templates.values() if isinstance(v, list))
                 
-                logger.info(f"🎉 Enrollment NORMAL completado: {session.user_id}")
-                logger.info(f"  - Duración: {session.duration:.1f}s")
-                logger.info(f"  - Muestras totales: {len(session.samples)}")
-                logger.info(f"  - Muestras válidas: {len(valid_samples)}")
-                logger.info(f"  - Templates guardados: {total_templates}")
-                logger.info(f"    * Anatómicos: {len(optimized_templates.get('anatomical', []))}")
-                logger.info(f"    * Dinámicos: {len(optimized_templates.get('dynamic', []))}")
+                print(f"🎉 Enrollment NORMAL completado: {session.user_id}")
+                print(f"  - Duración: {session.duration:.1f}s")
+                print(f"  - Muestras totales: {len(session.samples)}")
+                print(f"  - Muestras válidas: {len(valid_samples)}")
+                print(f"  - Templates guardados: {total_templates}")
+                print(f"    * Anatómicos: {len(optimized_templates.get('anatomical', []))}")
+                print(f"    * Dinámicos: {len(optimized_templates.get('dynamic', []))}")
                 
                 if session.progress_callback:
                     session.progress_callback(100.0)
@@ -2052,11 +2053,11 @@ class RealEnrollmentWorkflow:
     def _finalize_real_enrollment(self, session: RealEnrollmentSession):
         """Finaliza el enrollment generando templates finales."""
         try:
-            logger.info(f"Finalizando enrollment para usuario {session.user_id}")
+            print(f"Finalizando enrollment para usuario {session.user_id}")
             
             # Filtrar muestras válidas
             valid_samples = [s for s in session.samples if s.is_valid]
-            logger.info(f"Muestras válidas para templates: {len(valid_samples)}/{len(session.samples)}")
+            print(f"Muestras válidas para templates: {len(valid_samples)}/{len(session.samples)}")
             
             if len(valid_samples) < self.config.min_samples_per_gesture:
                 session.status = EnrollmentStatus.FAILED
@@ -2070,56 +2071,56 @@ class RealEnrollmentWorkflow:
             session_is_bootstrap = getattr(session, 'is_bootstrap', False)
             system_bootstrap_mode = getattr(self, 'bootstrap_mode', False)
             
-            logger.info("DEBUG FINALIZE ENROLLMENT:")
-            logger.info(f"   - session.is_bootstrap: {session_is_bootstrap}")
-            logger.info(f"   - self.bootstrap_mode: {system_bootstrap_mode}")
-            logger.info(f"   - Condicion original: {session_is_bootstrap or system_bootstrap_mode}")
+            print("DEBUG FINALIZE ENROLLMENT:")
+            print(f"   - session.is_bootstrap: {session_is_bootstrap}")
+            print(f"   - self.bootstrap_mode: {system_bootstrap_mode}")
+            print(f"   - Condicion original: {session_is_bootstrap or system_bootstrap_mode}")
             
             # Verificar estado de redes siamesas
             try:
-                anatomical_network = get_siamese_anatomical_network()
-                dynamic_network = get_siamese_dynamic_network()
+                anatomical_network = get_real_siamese_anatomical_network()
+                dynamic_network = get_real_siamese_dynamic_network()
                 
                 anatomical_trained = getattr(anatomical_network, 'is_trained', False)
                 dynamic_trained = getattr(dynamic_network, 'is_trained', False)
                 
-                logger.info(f"   - Red anatomica entrenada: {anatomical_trained}")
-                logger.info(f"   - Red dinamica entrenada: {dynamic_trained}")
+                print(f"   - Red anatomica entrenada: {anatomical_trained}")
+                print(f"   - Red dinamica entrenada: {dynamic_trained}")
                 
                 # Si las redes están entrenadas, usar modo normal
                 if anatomical_trained and dynamic_trained:
-                    logger.info("AMBAS REDES ENTRENADAS - FORZANDO MODO NORMAL")
+                    print("AMBAS REDES ENTRENADAS - FORZANDO MODO NORMAL")
                     use_bootstrap_mode = False
                 elif anatomical_trained or dynamic_trained:
-                    logger.info("REDES PARCIALMENTE ENTRENADAS - FORZANDO MODO NORMAL")
+                    print("REDES PARCIALMENTE ENTRENADAS - FORZANDO MODO NORMAL")
                     use_bootstrap_mode = False
                 else:
-                    logger.info("REDES NO ENTRENADAS - USANDO LOGICA ORIGINAL")
+                    print("REDES NO ENTRENADAS - USANDO LOGICA ORIGINAL")
                     use_bootstrap_mode = session_is_bootstrap or system_bootstrap_mode
                     
             except Exception as e:
                 logger.error(f"Error verificando redes: {e}")
                 # En caso de error, forzar modo normal
                 use_bootstrap_mode = False
-                logger.info("ERROR VERIFICANDO REDES - FORZANDO MODO NORMAL")
+                print("ERROR VERIFICANDO REDES - FORZANDO MODO NORMAL")
             
-            logger.info(f"DECISION FINAL: {'BOOTSTRAP' if use_bootstrap_mode else 'NORMAL'}")
+            print(f"DECISION FINAL: {'BOOTSTRAP' if use_bootstrap_mode else 'NORMAL'}")
             
             # VERIFICAR MODO BOOTSTRAP ANTES DE GENERAR TEMPLATES
             if use_bootstrap_mode:
                 # MODO BOOTSTRAP: Los datos ya se guardaron durante la captura
-                logger.info("MODO BOOTSTRAP: Datos ya guardados durante captura - Finalizando sesion")
-                logger.info("SALTANDO generacion de templates (redes no entrenadas en bootstrap)")
+                print("MODO BOOTSTRAP: Datos ya guardados durante captura - Finalizando sesion")
+                print("SALTANDO generacion de templates (redes no entrenadas en bootstrap)")
                 
                 session.status = EnrollmentStatus.COMPLETED
                 session.current_phase = EnrollmentPhase.ENROLLMENT_COMPLETE
                 session.end_time = time.time()
                 
-                logger.info(f"Enrollment BOOTSTRAP completado exitosamente para usuario {session.user_id}")
-                logger.info(f"  - Duracion: {session.duration:.1f} segundos")
-                logger.info(f"  - Muestras capturadas: {len(session.samples)}")
-                logger.info(f"  - Muestras validas: {len(valid_samples)}")
-                logger.info(f"  - Modo: Bootstrap (sin embeddings)")
+                print(f"Enrollment BOOTSTRAP completado exitosamente para usuario {session.user_id}")
+                print(f"  - Duracion: {session.duration:.1f} segundos")
+                print(f"  - Muestras capturadas: {len(session.samples)}")
+                print(f"  - Muestras validas: {len(valid_samples)}")
+                print(f"  - Modo: Bootstrap (sin embeddings)")
                 
                 if session.progress_callback:
                     session.progress_callback(100.0)
@@ -2127,7 +2128,7 @@ class RealEnrollmentWorkflow:
                 return
             
             # MODO NORMAL: Procesar templates con embeddings
-            logger.info("MODO NORMAL: Generando templates con embeddings")
+            print("MODO NORMAL: Generando templates con embeddings")
             
             # Generar templates finales
             session.current_phase = EnrollmentPhase.TEMPLATE_GENERATION
@@ -2139,6 +2140,11 @@ class RealEnrollmentWorkflow:
             
             templates = self.template_generator.generate_real_templates(valid_samples, session.user_id)
             
+            # AGREGAR ESTAS LÍNEAS:
+            print(f"DEBUG: Templates generados = {templates}")
+            print(f"DEBUG: Anatomical templates = {len(templates.get('anatomical', []))}")
+            print(f"DEBUG: Dynamic templates = {len(templates.get('dynamic', []))}")
+
             if not templates['anatomical'] and not templates['dynamic']:
                 session.status = EnrollmentStatus.FAILED
                 error_msg = "Error generando templates biometricos"
@@ -2151,24 +2157,24 @@ class RealEnrollmentWorkflow:
             optimized_templates = self.template_generator.optimize_real_templates(templates)
             
             # CAMBIO CRITICO: Logging actualizado para templates individuales
-            logger.info(f"Templates individuales generados exitosamente:")
-            logger.info(f"   - Anatomicos: {len(optimized_templates.get('anatomical', []))} templates individuales")
-            logger.info(f"   - Dinamicos: {len(optimized_templates.get('dynamic', []))} templates individuales")
+            print(f"Templates individuales generados exitosamente:")
+            print(f"   - Anatomicos: {len(optimized_templates.get('anatomical', []))} templates individuales")
+            print(f"   - Dinamicos: {len(optimized_templates.get('dynamic', []))} templates individuales")
             
             # Logging adicional de normas para verificacion
             if optimized_templates.get('anatomical'):
                 avg_norm_anat = np.mean([np.linalg.norm(e) for e in optimized_templates['anatomical']])
-                logger.info(f"   - Norma promedio anatomica: {avg_norm_anat:.3f}")
+                print(f"   - Norma promedio anatomica: {avg_norm_anat:.3f}")
             
             if optimized_templates.get('dynamic'):
                 avg_norm_dyn = np.mean([np.linalg.norm(e) for e in optimized_templates['dynamic']])
-                logger.info(f"   - Norma promedio dinamica: {avg_norm_dyn:.3f}")
+                print(f"   - Norma promedio dinamica: {avg_norm_dyn:.3f}")
             
             # Almacenar en base de datos
             session.current_phase = EnrollmentPhase.DATABASE_STORAGE
             session.status = EnrollmentStatus.STORING_DATA
             
-            logger.info("Iniciando almacenamiento en base de datos...")
+            print("Iniciando almacenamiento en base de datos...")
             
             # Modo normal: usar almacenamiento estandar
             if self._store_real_user_data(session, optimized_templates):
@@ -2179,12 +2185,12 @@ class RealEnrollmentWorkflow:
                 # CAMBIO CRITICO: Logging final actualizado
                 total_templates = sum(len(v) for v in optimized_templates.values() if isinstance(v, list))
                 
-                logger.info(f"Enrollment NORMAL completado exitosamente para usuario {session.user_id}")
-                logger.info(f"  - Duracion: {session.duration:.1f} segundos")
-                logger.info(f"  - Muestras capturadas: {len(session.samples)}")
-                logger.info(f"  - Templates individuales generados: {total_templates}")
-                logger.info(f"    * Anatomicos: {len(optimized_templates.get('anatomical', []))}")
-                logger.info(f"    * Dinamicos: {len(optimized_templates.get('dynamic', []))}")
+                print(f"Enrollment NORMAL completado exitosamente para usuario {session.user_id}")
+                print(f"  - Duracion: {session.duration:.1f} segundos")
+                print(f"  - Muestras capturadas: {len(session.samples)}")
+                print(f"  - Templates individuales generados: {total_templates}")
+                print(f"    * Anatomicos: {len(optimized_templates.get('anatomical', []))}")
+                print(f"    * Dinamicos: {len(optimized_templates.get('dynamic', []))}")
                 
                 if session.progress_callback:
                     session.progress_callback(100.0)
@@ -2216,13 +2222,13 @@ class RealEnrollmentWorkflow:
                         # Método 1: Copiar desde atributo directo del sample
                         if hasattr(sample, 'temporal_sequence') and sample.temporal_sequence is not None:
                             sample.dynamic_features.temporal_sequence = sample.temporal_sequence
-                            logger.info(f"Temporal sequence copiada para {sample.sample_id}: {len(sample.temporal_sequence)} frames")
+                            print(f"Temporal sequence copiada para {sample.sample_id}: {len(sample.temporal_sequence)} frames")
                         # Método 2: Copiar desde metadata como fallback
                         elif hasattr(sample, 'metadata') and isinstance(sample.metadata, dict):
                             if 'temporal_sequence' in sample.metadata and sample.metadata['temporal_sequence']:
                                 import numpy as np
                                 sample.dynamic_features.temporal_sequence = np.array(sample.metadata['temporal_sequence'], dtype=np.float32)
-                                logger.info(f"Temporal sequence copiada desde metadata: {len(sample.metadata['temporal_sequence'])} frames")
+                                print(f"Temporal sequence copiada desde metadata: {len(sample.metadata['temporal_sequence'])} frames")
                     
                     # Agregar embeddings anatómicos
                     if hasattr(sample, 'anatomical_embedding') and sample.anatomical_embedding is not None:
@@ -2232,24 +2238,24 @@ class RealEnrollmentWorkflow:
                     if hasattr(sample, 'dynamic_embedding') and sample.dynamic_embedding is not None:
                         templates['dynamic'].append(sample.dynamic_embedding)
                 
-                logger.info(f"Templates basicos generados: {len(templates['anatomical'])} anatomicos, {len(templates['dynamic'])} dinamicos")
+                print(f"Templates basicos generados: {len(templates['anatomical'])} anatomicos, {len(templates['dynamic'])} dinamicos")
                 return templates
             
             def optimize_real_templates(self, templates):
                 """Mantiene templates individuales SIN promediado."""
-                logger.info("✅ Modo básico: preservando templates individuales")
+                print("✅ Modo básico: preservando templates individuales")
                 
                 optimized = {}
                 
                 if templates['anatomical']:
                     # ✅ MANTENER lista de embeddings individuales
                     optimized['anatomical'] = templates['anatomical']
-                    logger.info(f"✅ {len(templates['anatomical'])} templates anatómicos individuales preservados")
+                    print(f"✅ {len(templates['anatomical'])} templates anatómicos individuales preservados")
                 
                 if templates['dynamic']:
                     # ✅ MANTENER lista de embeddings individuales
                     optimized['dynamic'] = templates['dynamic']
-                    logger.info(f"✅ {len(templates['dynamic'])} templates dinámicos individuales preservados")
+                    print(f"✅ {len(templates['dynamic'])} templates dinámicos individuales preservados")
                 
                 return optimized
         
@@ -2270,7 +2276,7 @@ class RealEnrollmentWorkflow:
             bool: True si se almacenó exitosamente
         """
         try:
-            logger.info(f"Almacenando datos REALES del usuario {session.user_id}")
+            print(f"Almacenando datos REALES del usuario {session.user_id}")
             
             # Crear perfil de usuario
             user_profile = UserProfile(
@@ -2299,7 +2305,7 @@ class RealEnrollmentWorkflow:
             
             # Procesar templates ANATÓMICOS individuales
             if 'anatomical' in templates and templates['anatomical']:
-                logger.info(f"Procesando {len(templates['anatomical'])} templates anatomicos individuales")
+                print(f"Procesando {len(templates['anatomical'])} templates anatomicos individuales")
                 
                 for i, anatomical_embedding in enumerate(templates['anatomical']):
                     sample = session.samples[i] if i < len(session.samples) else None
@@ -2342,11 +2348,11 @@ class RealEnrollmentWorkflow:
                     )
                     
                     biometric_templates.append(biometric_template)
-                    logger.info(f"  Template anatomico {i+1}/{len(templates['anatomical'])} creado (norma: {np.linalg.norm(anatomical_embedding):.3f})")
+                    print(f"  Template anatomico {i+1}/{len(templates['anatomical'])} creado (norma: {np.linalg.norm(anatomical_embedding):.3f})")
             
             # Procesar templates DINÁMICOS individuales
             if 'dynamic' in templates and templates['dynamic']:
-                logger.info(f"Procesando {len(templates['dynamic'])} templates dinamicos individuales")
+                print(f"Procesando {len(templates['dynamic'])} templates dinamicos individuales")
                 
                 for i, dynamic_embedding in enumerate(templates['dynamic']):
                     sample = session.samples[i] if i < len(session.samples) else None
@@ -2362,23 +2368,23 @@ class RealEnrollmentWorkflow:
                         # Método 1: Atributo directo de sample
                         if hasattr(sample, 'temporal_sequence') and sample.temporal_sequence is not None:
                             temporal_seq = sample.temporal_sequence.tolist() if hasattr(sample.temporal_sequence, 'tolist') else sample.temporal_sequence
-                            logger.info(f"  Temporal sequence extraida de sample.temporal_sequence: {len(temporal_seq)} frames")
+                            print(f"  Temporal sequence extraida de sample.temporal_sequence: {len(temporal_seq)} frames")
                         
                         # Método 2: Metadata de sample
                         elif hasattr(sample, 'metadata') and isinstance(sample.metadata, dict):
                             if 'temporal_sequence' in sample.metadata and sample.metadata['temporal_sequence']:
                                 temporal_seq = sample.metadata['temporal_sequence']
-                                logger.info(f"  Temporal sequence extraida de sample.metadata: {len(temporal_seq)} frames")
+                                print(f"  Temporal sequence extraida de sample.metadata: {len(temporal_seq)} frames")
                         
                         # Método 3: dynamic_features.temporal_sequence
                         elif (sample.dynamic_features and 
                             hasattr(sample.dynamic_features, 'temporal_sequence') and 
                             sample.dynamic_features.temporal_sequence is not None):
                             temporal_seq = sample.dynamic_features.temporal_sequence.tolist() if hasattr(sample.dynamic_features.temporal_sequence, 'tolist') else sample.dynamic_features.temporal_sequence
-                            logger.info(f"  Temporal sequence extraida de dynamic_features: {len(temporal_seq)} frames")
+                            print(f"  Temporal sequence extraida de dynamic_features: {len(temporal_seq)} frames")
                     
                     if not temporal_seq:
-                        logger.info(f"  Sin temporal_sequence disponible para muestra {i+1}")
+                        print(f"  Sin temporal_sequence disponible para muestra {i+1}")
                     
                     biometric_template = BiometricTemplate(
                         user_id=session.user_id,
@@ -2412,11 +2418,11 @@ class RealEnrollmentWorkflow:
                     )
                     
                     biometric_templates.append(biometric_template)
-                    logger.info(f"  Template dinamico {i+1}/{len(templates['dynamic'])} creado (norma: {np.linalg.norm(dynamic_embedding):.3f})")
+                    print(f"  Template dinamico {i+1}/{len(templates['dynamic'])} creado (norma: {np.linalg.norm(dynamic_embedding):.3f})")
             
             # Almacenar perfil de usuario
             if self.database.store_user_profile(user_profile):
-                logger.info(f"Perfil de usuario {session.user_id} almacenado")
+                print(f"Perfil de usuario {session.user_id} almacenado")
             else:
                 logger.error(f"Error almacenando perfil de usuario {session.user_id}")
                 return False
@@ -2432,10 +2438,10 @@ class RealEnrollmentWorkflow:
                     logger.error(f"Error almacenando template {modality} indice {template.metadata.get('sample_index')}")
                     return False
             
-            logger.info(f"Todos los datos almacenados exitosamente para usuario {session.user_id}")
-            logger.info(f"   Total templates guardados: {templates_stored}")
-            logger.info(f"   Anatomicos: {len(templates.get('anatomical', []))}")
-            logger.info(f"   Dinamicos: {len(templates.get('dynamic', []))}")
+            print(f"Todos los datos almacenados exitosamente para usuario {session.user_id}")
+            print(f"   Total templates guardados: {templates_stored}")
+            print(f"   Anatomicos: {len(templates.get('anatomical', []))}")
+            print(f"   Dinamicos: {len(templates.get('dynamic', []))}")
             return True
             
         except Exception as e:
@@ -2524,11 +2530,11 @@ class RealEnrollmentWorkflow:
             if hasattr(self, 'window_created') and self.window_created:
                 cv2.destroyWindow(self.window_name)
                 self.window_created = False
-                logger.info(f"Ventana {self.window_name} cerrada")
+                print(f"Ventana {self.window_name} cerrada")
             
             try:
                 release_camera()
-                logger.info("✅ Cámara global liberada")
+                print("✅ Cámara global liberada")
             except Exception as e:
                 logger.error(f"Error liberando cámara: {e}")
     
@@ -2537,18 +2543,18 @@ class RealEnrollmentWorkflow:
             
             try:
                 release_camera()
-                logger.info("✅ Cámara global liberada")
+                print("✅ Cámara global liberada")
             except Exception as e:
                 logger.error(f"Error liberando cámara: {e}")
                 global _camera_instance
                 _camera_instance = None
-                logger.info("🔧 Reset manual ejecutado")
+                print("🔧 Reset manual ejecutado")
             
             cv2.waitKey(100)
             cv2.destroyAllWindows()
             cv2.waitKey(100)
             
-            logger.info("Recursos liberados")
+            print("Recursos liberados")
             
         except Exception as e:
             logger.error(f"Error liberando recursos: {e}")
@@ -2583,7 +2589,7 @@ class RealEnrollmentWorkflow:
                     if len(sequence) >= 3:
                         individual_sequences.append(sequence)
                         
-            logger.info(f"✅ Extraídas {len(individual_sequences)} secuencias individuales")
+            print(f"✅ Extraídas {len(individual_sequences)} secuencias individuales")
             return individual_sequences
             
         except Exception as e:
@@ -2639,9 +2645,9 @@ class RealEnrollmentSystem:
             'networks_trained': False
         }
         
-        logger.info("RealEnrollmentSystem inicializado")
-        logger.info(f"  - Config: {self.config.samples_per_gesture} muestras/gesto, umbral {self.config.quality_threshold}")
-        logger.info(f"  - Bootstrap: {'ACTIVADO' if self.bootstrap_mode else 'DESACTIVADO'}")
+        print("RealEnrollmentSystem inicializado")
+        print(f"  - Config: {self.config.samples_per_gesture} muestras/gesto, umbral {self.config.quality_threshold}")
+        print(f"  - Bootstrap: {'ACTIVADO' if self.bootstrap_mode else 'DESACTIVADO'}")
 
     def check_bootstrap_mode(self) -> bool:
         """
@@ -2652,7 +2658,7 @@ class RealEnrollmentSystem:
         """
         try:
             self.bootstrap_mode = self._check_bootstrap_needed()
-            logger.info(f"Bootstrap mode verificado: {'ACTIVO' if self.bootstrap_mode else 'DESACTIVADO'}")
+            print(f"Bootstrap mode verificado: {'ACTIVO' if self.bootstrap_mode else 'DESACTIVADO'}")
             return self.bootstrap_mode
         except Exception as e:
             logger.error(f"Error verificando bootstrap mode: {e}")
@@ -2669,14 +2675,14 @@ class RealEnrollmentSystem:
                 dynamic_net = get_real_siamese_dynamic_network()
                 
                 if anatomical_net.is_trained and dynamic_net.is_trained:
-                    logger.info("🎯 Redes YA ENTRENADAS - Modo normal")
+                    print("🎯 Redes YA ENTRENADAS - Modo normal")
                     return False
                     
             except Exception as e:
-                logger.info(f"⚠️ No se pudieron cargar redes: {e}")
+                print(f"⚠️ No se pudieron cargar redes: {e}")
             
             if not hasattr(self, 'database') or self.database is None:
-                logger.info("🔧 Database no inicializada - Bootstrap")
+                print("🔧 Database no inicializada - Bootstrap")
                 return True
             
             try:
@@ -2692,22 +2698,22 @@ class RealEnrollmentSystem:
                 bootstrap_needed = sufficient_users < 2
                 
                 if bootstrap_needed:
-                    logger.info("🔧 BOOTSTRAP ACTIVADO:")
-                    logger.info(f"   - Usuarios suficientes: {sufficient_users}/2")
-                    logger.info(f"   - Redes se entrenarán después del 2º usuario")
+                    print("🔧 BOOTSTRAP ACTIVADO:")
+                    print(f"   - Usuarios suficientes: {sufficient_users}/2")
+                    print(f"   - Redes se entrenarán después del 2º usuario")
                 else:
-                    logger.info("🎯 MODO NORMAL: Suficientes datos")
+                    print("🎯 MODO NORMAL: Suficientes datos")
                 
                 return bootstrap_needed
                 
             except Exception as db_error:
-                logger.info(f"⚠️ Error accediendo DB: {db_error}")
-                logger.info("🔧 Activando bootstrap")
+                print(f"⚠️ Error accediendo DB: {db_error}")
+                print("🔧 Activando bootstrap")
                 return True
             
         except Exception as e:
             logger.error(f"Error verificando bootstrap: {e}")
-            logger.info("🔧 Activando bootstrap")
+            print("🔧 Activando bootstrap")
             return True
     
     def _load_real_default_config(self) -> Dict[str, Any]:
@@ -2754,11 +2760,11 @@ class RealEnrollmentSystem:
         try:
             self.bootstrap_mode = self._check_bootstrap_needed()
             
-            logger.info(f"Iniciando enrollment: {user_id}")
-            logger.info(f"  - Nombre: {username}")
-            logger.info(f"  - Gestos: {' → '.join(gesture_sequence)}")
-            logger.info(f"  - Muestras/gesto: {self.config.samples_per_gesture}")
-            logger.info(f"  - Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
+            print(f"Iniciando enrollment: {user_id}")
+            print(f"  - Nombre: {username}")
+            print(f"  - Gestos: {' → '.join(gesture_sequence)}")
+            print(f"  - Muestras/gesto: {self.config.samples_per_gesture}")
+            print(f"  - Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
             
             if not user_id or not username or not gesture_sequence:
                 raise ValueError("user_id, username y gesture_sequence requeridos")
@@ -2766,7 +2772,7 @@ class RealEnrollmentSystem:
             if self.config.enable_duplicate_check:
                 existing_user = self.database.get_user(user_id)
                 if existing_user:
-                    logger.info(f"Usuario {user_id} ya existe - se actualizará")
+                    print(f"Usuario {user_id} ya existe - se actualizará")
             
             self.workflow.set_bootstrap_mode(self.bootstrap_mode)
             
@@ -2789,10 +2795,10 @@ class RealEnrollmentSystem:
             if self.bootstrap_mode:
                 self.stats['bootstrap_enrollments'] += 1
             
-            logger.info(f"Sesión iniciada: {session.session_id}")
-            logger.info(f"  - Muestras necesarias: {session.total_samples_needed}")
-            logger.info(f"  - Estado: {session.status.value}")
-            logger.info(f"  - Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
+            print(f"Sesión iniciada: {session.session_id}")
+            print(f"  - Muestras necesarias: {session.total_samples_needed}")
+            print(f"  - Estado: {session.status.value}")
+            print(f"  - Bootstrap: {'SÍ' if self.bootstrap_mode else 'NO'}")
             
             return session.session_id
             
@@ -2808,9 +2814,12 @@ class RealEnrollmentSystem:
     
     
     # ESTA SE AGREGO NUEVA 
+
+    
     def process_enrollment_frame_with_image(self, session_id: str, frame_image: np.ndarray) -> Dict[str, Any]:
         """
         Procesa un frame de enrollment recibido desde el frontend.
+        ✅ INCLUYE GUARDADO DURANTE CAPTURA EN MODO BOOTSTRAP
         
         Args:
             session_id: ID de la sesión activa
@@ -2960,7 +2969,9 @@ class RealEnrollmentSystem:
                 logger.info(f"✅ Características anatómicas extraídas: {anatomical_features.complete_vector.shape}")
                 
             except Exception as e:
-                logger.error(f"Error extrayendo características: {e}")
+                logger.error(f"Error extrayendo características anatómicas: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
                 return {
                     'session_id': session_id,
                     'status': session.status.value,
@@ -2973,29 +2984,27 @@ class RealEnrollmentSystem:
                     'samples_needed': session.total_samples_needed,
                     'sample_captured': False,
                     'session_completed': False,
-                    'message': f'Error: {str(e)}',
+                    'message': f'Error extrayendo características: {e}',
                     'is_real_processing': True,
                     'bootstrap_mode': self.bootstrap_mode
                 }
             
-            # ✅ AGREGAR FRAME AL BUFFER DINÁMICO
+            # ✅ Agregar frame al buffer temporal del extractor dinámico
             try:
                 self.workflow.dynamic_extractor.add_frame_real(
-                    landmarks=hand_result.landmarks,
-                    gesture_name=detected_gesture,
-                    confidence=gesture_result.confidence if gesture_result else 0.8,
-                    world_landmarks=hand_result.world_landmarks
+                    hand_result.landmarks,
+                    session.current_gesture,
+                    hand_result.confidence,
+                    hand_result.world_landmarks
                 )
-                
-                logger.info(f"✅ Frame agregado al buffer dinámico. Buffer: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
-                
+                logger.info(f"✅ Frame agregado. Buffer: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
             except Exception as e:
-                logger.error(f"❌ Error agregando frame al buffer: {e}")
-
+                logger.error(f"❌ Error agregando frame: {e}")
+            
             # ✅ EXTRAER CARACTERÍSTICAS DINÁMICAS
             dynamic_features = None
             temporal_sequence = None
-
+            
             if len(self.workflow.dynamic_extractor.temporal_buffer) >= 10:
                 try:
                     buffer_data = []
@@ -3013,25 +3022,25 @@ class RealEnrollmentSystem:
                     )
                     
                     if dynamic_features:
-                        logger.info(f"✅ Características dinámicas extraídas: {dynamic_features.complete_vector.shape}")
-                        
-                        # Extraer secuencia temporal
-                        temporal_sequence = self.workflow._extract_temporal_sequence_for_dynamic_network()
-                        if temporal_sequence is not None:
-                            logger.info(f"✅ Secuencia temporal extraída: {temporal_sequence.shape}")
-                        else:
-                            logger.info("⚠️ No se pudo extraer secuencia temporal")
+                        logger.info(f"✅ Características dinámicas: {dynamic_features.complete_vector.shape}")
                     else:
                         logger.info(f"⏳ Dinámicas: esperando más frames")
-                        
+                    
+                    temporal_sequence = self.workflow._extract_temporal_sequence_for_dynamic_network()
+                    if temporal_sequence is not None:
+                        logger.info(f"✅ Secuencia temporal: {temporal_sequence.shape}")
+                    else:
+                        logger.info("⚠️ No se pudo extraer secuencia temporal")
+                            
                 except Exception as e:
-                    logger.error(f"❌ Error extrayendo dinámicas: {e}")
+                    logger.error(f"❌ Error dinámicas: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
             else:
-                logger.info(f"⏳ Buffer dinámico: {len(self.workflow.dynamic_extractor.temporal_buffer)}/10 frames mínimos")
+                logger.info(f"⏳ Buffer: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
             
-            # ✅ CREAR MUESTRA CON CARACTERÍSTICAS DINÁMICAS
-            sample_number = len([s for s in session.samples if s.gesture_name == session.current_gesture]) + 1
-            sample_id = f"{session.session_id}_{session.current_gesture}_{sample_number}"
+            # ✅ CREAR MUESTRA COMPLETA
+            sample_id = f"{session.user_id}_{session.current_gesture}_{len(session.samples)}"
             
             sample = RealEnrollmentSample(
                 sample_id=sample_id,
@@ -3039,280 +3048,220 @@ class RealEnrollmentSystem:
                 sample_type=SampleType.COMBINED,
                 gesture_name=session.current_gesture,
                 anatomical_features=anatomical_features,
-                dynamic_features=dynamic_features,  # ✅ AHORA TIENE DATOS
-                quality_assessment=None,
-                confidence=gesture_result.confidence if gesture_result else 0.0,
-                timestamp=current_time,
-                capture_duration=current_time - session.start_time,
-                frame_count=session.frames_processed + 1
+                dynamic_features=dynamic_features,
+                confidence=hand_result.confidence,
+                timestamp=current_time
             )
             
-            # ✅ AGREGAR TEMPORAL SEQUENCE
-            if temporal_sequence is not None:
+            sample.is_valid = True
+            sample.frame_count = 1
+            sample.capture_duration = 0.0
+            
+            # ✅ Agregar datos temporales DESPUÉS de crear la muestra
+            if temporal_sequence is not None and len(temporal_sequence) >= 5:
                 sample.temporal_sequence = temporal_sequence
                 sample.sequence_length = len(temporal_sequence)
                 sample.has_temporal_data = True
-                
-                if not hasattr(sample, 'metadata'):
-                    sample.metadata = {}
-                
-                sample.metadata['temporal_sequence'] = temporal_sequence.tolist()
-                sample.metadata['sequence_length'] = len(temporal_sequence)
-                sample.metadata['has_temporal_data'] = True
-                sample.metadata['data_source'] = 'real_dynamic_extractor_buffer'
-                
-                logger.info(f"✅ Temporal sequence agregada al sample: {len(temporal_sequence)} frames")
+                logger.info(f"📊 Datos temporales agregados: {sample.sequence_length} frames")
             else:
+                sample.has_temporal_data = False
                 sample.temporal_sequence = None
                 sample.sequence_length = 0
-                sample.has_temporal_data = False
-                if not hasattr(sample, 'metadata'):
-                    sample.metadata = {}
-                sample.metadata['has_temporal_data'] = False
             
-            sample.is_valid = True
+            # Agregar a sesión
             session.samples.append(sample)
             session.last_capture_time = current_time
-            session.frames_processed += 1
             
-            logger.info(f"✅ Muestra capturada: {len(session.samples)}/{session.total_samples_needed}")
-            logger.info(f"   - Anatómicas: ✅")
-            logger.info(f"   - Dinámicas: {'✅' if dynamic_features else '⏳'}")
-            logger.info(f"   - Temporal: {'✅' if temporal_sequence is not None else '⏳'}")
+            logger.info(f"✅ Muestra creada: {sample_id}")
+            logger.info(f"   Total muestras en sesión: {len(session.samples)}")
             
-            # Verificar si completó el gesto actual
-            samples_this_gesture = sum(1 for s in session.samples if s.gesture_name == session.current_gesture)
+            # ✅✅✅ GUARDAR EN MODO BOOTSTRAP (CORREGIDO) ✅✅✅
+            if self.bootstrap_mode:
+                try:
+                    logger.info("="*70)
+                    logger.info("💾 GUARDANDO MUESTRA EN MODO BOOTSTRAP")
+                    logger.info("="*70)
+                    
+                    bootstrap_sample = {
+                        'sample_id': sample_id,
+                        'user_id': session.user_id,
+                        'gesture_name': session.current_gesture,
+                        'anatomical_features': anatomical_features.complete_vector.tolist() if anatomical_features else None,
+                        'dynamic_features': dynamic_features.complete_vector.tolist() if dynamic_features else None,
+                        'temporal_sequence': temporal_sequence.tolist() if temporal_sequence is not None else None,
+                        'confidence': float(hand_result.confidence),
+                        'timestamp': current_time
+                    }
+                    
+                    bootstrap_dir = Path("biometric_data/bootstrap_samples")
+                    bootstrap_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    bootstrap_file = bootstrap_dir / f"{session.user_id}_bootstrap.json"
+                    
+                    if bootstrap_file.exists():
+                        with open(bootstrap_file, 'r', encoding='utf-8') as f:
+                            bootstrap_data = json.load(f)
+                    else:
+                        bootstrap_data = {
+                            'user_id': session.user_id,
+                            'username': session.username,
+                            'samples': []
+                        }
+                    
+                    bootstrap_data['samples'].append(bootstrap_sample)
+                    
+                    with open(bootstrap_file, 'w', encoding='utf-8') as f:
+                        json.dump(bootstrap_data, f, indent=2, ensure_ascii=False)
+                    
+                    logger.info(f"✅ Muestra bootstrap guardada en JSON: {bootstrap_file}")
+                    logger.info(f"   Total muestras en archivo: {len(bootstrap_data['samples'])}")
+                    
+                    # ✅✅✅ AGREGAR: GUARDAR EN BASE DE DATOS ✅✅✅
+                    try:
+                        # 1. Verificar si el usuario ya existe
+                        existing_users = self.database.list_users()
+                        user_exists = any(u.user_id == session.user_id for u in existing_users)
+                        
+                        if not user_exists:
+                            # Crear perfil de usuario
+                            user_profile = UserProfile(
+                                user_id=session.user_id,
+                                username=session.username,
+                                gesture_sequence=session.gesture_sequence,                                
+                                total_enrollments=1,
+                                metadata={'bootstrap': True, 'mode': 'bootstrap_enrollment'}
+                            )
+                            
+                            self.database.store_user_profile(user_profile)
+                            logger.info(f"✅ Perfil de usuario creado en BD: {session.user_id}")
+                        
+                        # 2. Crear template bootstrap para esta muestra
+                        bootstrap_template = BiometricTemplate(
+                            template_id=f"{session.user_id}_bootstrap_{sample_id}",
+                            user_id=session.user_id,
+                            template_type=TemplateType.BOOTSTRAP_SAMPLE,
+                            embedding_vector=anatomical_features.complete_vector if anatomical_features else np.zeros(180),
+                            metadata={
+                                'sample_id': sample_id,
+                                'gesture': session.current_gesture,
+                                'timestamp': current_time,
+                                'bootstrap': True,
+                                'confidence': float(hand_result.confidence),
+                                'has_temporal': temporal_sequence is not None
+                            }
+                        )
+                        
+                        self.database.store_biometric_template(bootstrap_template)
+                        logger.info(f"✅ Template bootstrap guardado en BD: {bootstrap_template.template_id}")
+                        
+                    except Exception as db_error:
+                        logger.error(f"❌ Error guardando en base de datos: {db_error}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                    
+                except Exception as e:
+                    logger.error("="*70)
+                    logger.error(f"❌ BOOTSTRAP: Error guardando - {e}")
+                    logger.error("="*70)
+                    import traceback
+                    logger.error(traceback.format_exc())
+            
+            # Preparar respuesta base
+            samples_this_gesture = len([s for s in session.samples if s.gesture_name == session.current_gesture])
             
             response_base = {
                 'session_id': session_id,
-                'status': session.status.value,
-                'phase': session.current_phase.value,
                 'progress': (len(session.samples) / session.total_samples_needed) * 100,
                 'current_gesture': session.current_gesture,
                 'current_gesture_index': session.current_gesture_index,
                 'total_gestures': len(session.gesture_sequence),
                 'samples_collected': len(session.samples),
                 'samples_needed': session.total_samples_needed,
+                'samples_this_gesture': samples_this_gesture,
                 'is_real_processing': True,
                 'bootstrap_mode': self.bootstrap_mode
             }
             
+            # ✅ Verificar si el gesto actual está completo
             if samples_this_gesture >= self.config.samples_per_gesture:
+                logger.info(f"🎉 ¡GESTO '{session.current_gesture}' COMPLETADO!")
+                
+                # Avanzar al siguiente gesto
                 session.current_gesture_index += 1
                 
-                if session.current_gesture_index < len(session.gesture_sequence):
-                    session.current_gesture = session.gesture_sequence[session.current_gesture_index]
-                    logger.info(f"➡️ Siguiente gesto: {session.current_gesture}")
+                if session.current_gesture_index >= len(session.gesture_sequence):
+                    # ✅✅✅ ENROLLMENT COMPLETADO
+                    logger.info("=" * 70)
+                    logger.info("🎉 ENROLLMENT REAL COMPLETADO!")
+                    logger.info("=" * 70)
+                    
+                    session.status = EnrollmentStatus.COMPLETED
+                    session.current_phase = EnrollmentPhase.ENROLLMENT_COMPLETE
+                    session.end_time = time.time()
+                    
+                    if self.bootstrap_mode:
+                        logger.info("=" * 70)
+                        logger.info("🔧 MODO BOOTSTRAP: DATOS YA GUARDADOS DURANTE CAPTURA")
+                        logger.info(f"   Total muestras guardadas: {len(session.samples)}")
+                        logger.info("=" * 70)
+                        
+                        from time import sleep as time_sleep
+                        time_sleep(0.5)
+                        
+                        db_users = self.database.list_users()
+                        logger.info(f"📊 Usuarios en BD: {len(db_users)}")
+                        
+                        user_found = False
+                        for user in db_users:
+                            logger.info(f"   - Usuario en DB: {user.user_id}")
+                            if user.user_id == session.user_id:
+                                user_found = True
+                                templates = self.database.list_user_templates(user.user_id)
+                                logger.info(f"✅ Usuario {session.user_id} CONFIRMADO con {len(templates)} templates")
+                        
+                        if not user_found:
+                            logger.error("="*70)
+                            logger.error(f"❌ Usuario {session.user_id} NO ENCONTRADO en base de datos")
+                            logger.error("❌ El guardado FALLÓ durante captura")
+                            logger.error("="*70)
+                            
+                            session.status = EnrollmentStatus.FAILED
+                            return {
+                                **response_base,
+                                'status': EnrollmentStatus.FAILED.value,
+                                'phase': EnrollmentPhase.DATABASE_STORAGE.value,
+                                'progress': 100.0,
+                                'session_completed': True,
+                                'sample_captured': False,
+                                'message': 'Error: Datos no se guardaron durante captura',
+                                'error': 'User not found in database after bootstrap enrollment'
+                            }
+                        
+                        logger.info("="*70)
+                        logger.info("🎉🎉🎉 ENROLLMENT BOOTSTRAP COMPLETADO EXITOSAMENTE 🎉🎉🎉")
+                        logger.info(f"   Usuario: {session.user_id} con {len(templates)} templates")
+                        logger.info("="*70)
+                        
+                        return {
+                            **response_base,
+                            'status': EnrollmentStatus.COMPLETED.value,
+                            'phase': EnrollmentPhase.ENROLLMENT_COMPLETE.value,
+                            'progress': 100.0,
+                            'session_completed': True,
+                            'sample_captured': True,
+                            'message': '¡Enrollment completado! Todas las muestras guardadas.',
+                            'user_saved': True
+                        }
+                    
+                    else:
+                        # MODO NORMAL
+                        logger.info("🔄 MODO NORMAL: Llamando a _finalize_real_enrollment")
+                        pass
+                
                 else:
-                    # COMPLETADO
-                    logger.info("="*70)
-                    logger.info("="*70)
-                    logger.info("="*70)
-                    logger.info("🎉🎉🎉 TODAS LAS MUESTRAS RECOLECTADAS 🎉🎉🎉")
-                    logger.info(f"   Total muestras: {len(session.samples)}")
-                    logger.info(f"   Usuario: {session.user_id}")
-                    logger.info(f"   Username: {session.username}")
-                    logger.info("="*70)
-                    logger.info("="*70)
-                    logger.info("="*70)
-                    
-                    # ✅ LOG 1: Verificar workflow
-                    logger.info("🔍 PASO 1: Verificando workflow...")
-                    
-                    if not hasattr(self, 'workflow'):
-                        logger.error("❌ ERROR: self.workflow NO EXISTE (no hasattr)")
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': 'Error: workflow no existe (hasattr)',
-                            'error': 'Workflow attribute not found',
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                    
-                    if self.workflow is None:
-                        logger.error("❌ ERROR: self.workflow ES NONE")
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': 'Error: workflow es None',
-                            'error': 'Workflow is None',
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                    
-                    logger.info(f"✅ PASO 1 OK: Workflow existe - Tipo: {type(self.workflow).__name__}")
-                    
-                    # ✅ LOG 2: Verificar método _finalize_real_enrollment
-                    logger.info("🔍 PASO 2: Verificando método _finalize_real_enrollment...")
-                    
-                    if not hasattr(self.workflow, '_finalize_real_enrollment'):
-                        logger.error("❌ ERROR: workflow NO TIENE método _finalize_real_enrollment")
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': 'Error: método _finalize_real_enrollment no existe',
-                            'error': 'Method not found',
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                    
-                    logger.info("✅ PASO 2 OK: Método _finalize_real_enrollment existe")
-                    
-                    # ✅ LOG 3: LLAMAR AL MÉTODO
-                    logger.info("="*70)
-                    logger.info("🔄 PASO 3: LLAMANDO A workflow._finalize_real_enrollment()")
-                    logger.info(f"   Sesión ID: {session.session_id}")
-                    logger.info(f"   Usuario: {session.user_id}")
-                    logger.info(f"   Muestras: {len(session.samples)}")
-                    logger.info("="*70)
-                    
-                    try:
-                        # LLAMADA AL MÉTODO
-                        self.workflow._finalize_real_enrollment(session)
-                        
-                        logger.info("="*70)
-                        logger.info("✅✅✅ workflow._finalize_real_enrollment() COMPLETADO SIN ERRORES ✅✅✅")
-                        logger.info("="*70)
-                        
-                    except AttributeError as attr_error:
-                        logger.error("="*70)
-                        logger.error(f"❌ AttributeError en _finalize_real_enrollment: {attr_error}")
-                        logger.error("="*70)
-                        import traceback
-                        logger.error(traceback.format_exc())
-                        
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': f'AttributeError: {str(attr_error)}',
-                            'error': str(attr_error),
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                        
-                    except TypeError as type_error:
-                        logger.error("="*70)
-                        logger.error(f"❌ TypeError en _finalize_real_enrollment: {type_error}")
-                        logger.error("="*70)
-                        import traceback
-                        logger.error(traceback.format_exc())
-                        
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': f'TypeError: {str(type_error)}',
-                            'error': str(type_error),
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                        
-                    except Exception as finalize_error:
-                        logger.error("="*70)
-                        logger.error(f"❌ EXCEPCIÓN GENÉRICA en _finalize_real_enrollment: {finalize_error}")
-                        logger.error(f"   Tipo: {type(finalize_error).__name__}")
-                        logger.error("="*70)
-                        import traceback
-                        logger.error(traceback.format_exc())
-                        
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': f'Error: {str(finalize_error)}',
-                            'error': str(finalize_error),
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                    
-                    # ✅ LOG 4: Verificar si se guardó
-                    logger.info("="*70)
-                    logger.info("🔍 PASO 4: VERIFICANDO SI SE GUARDÓ EN LA BD")
-                    logger.info("="*70)
-                    
-                    from time import sleep as time_sleep
-                    time_sleep(0.5)
-                    
-                    db_users = self.database.list_users()
-                    logger.info(f"📊 Usuarios en BD: {len(db_users)}")
-                    
-                    user_found = False
-                    for user in db_users:
-                        logger.info(f"   - Usuario en DB: {user.user_id}")
-                        if user.user_id == session.user_id:
-                            user_found = True
-                            templates = self.database.list_user_templates(user.user_id)
-                            logger.info(f"✅ Usuario {session.user_id} CONFIRMADO con {len(templates)} templates")
-                    
-                    if not user_found:
-                        logger.error("="*70)
-                        logger.error(f"❌ Usuario {session.user_id} NO ENCONTRADO en base de datos")
-                        logger.error("❌ El guardado FALLÓ - revisar _store_real_user_data")
-                        logger.error("="*70)
-                        
-                        session.status = EnrollmentStatus.FAILED
-                        return {
-                            **response_base,
-                            'status': EnrollmentStatus.FAILED.value,
-                            'phase': EnrollmentPhase.DATABASE_STORAGE.value,
-                            'progress': 100.0,
-                            'session_completed': True,
-                            'sample_captured': False,
-                            'message': 'Error: Datos no se guardaron',
-                            'error': 'User not found in database',
-                            'is_real_processing': True,
-                            'bootstrap_mode': self.bootstrap_mode
-                        }
-                    
-                    # ✅ TODO EXITOSO
-                    logger.info("="*70)
-                    logger.info("="*70)
-                    logger.info("🎉🎉🎉 ENROLLMENT COMPLETADO EXITOSAMENTE 🎉🎉🎉")
-                    logger.info(f"   Usuario: {session.user_id} guardado correctamente")
-                    logger.info("="*70)
-                    logger.info("="*70)
-                    
-                    return {
-                        **response_base,
-                        'status': EnrollmentStatus.COMPLETED.value,
-                        'phase': EnrollmentPhase.ENROLLMENT_COMPLETE.value,
-                        'progress': 100.0,
-                        'session_completed': True,
-                        'sample_captured': False,
-                        'message': '¡Enrollment completado y guardado!',
-                        'is_real_processing': True,
-                        'bootstrap_mode': self.bootstrap_mode,
-                        'user_saved': True
-                    }
+                    # Avanzar al siguiente gesto
+                    session.current_gesture = session.gesture_sequence[session.current_gesture_index]
+                    logger.info(f"🔄 Cambiando al siguiente gesto: {session.current_gesture} ({session.current_gesture_index + 1}/{len(session.gesture_sequence)})")
             
             return {
                 **response_base,
@@ -3439,12 +3388,12 @@ class RealEnrollmentSystem:
             quality_assessment = self.workflow.get_current_quality_assessment()
             
             roi_result = getattr(self.workflow, 'last_roi_result', None)
-            logger.info(f"🔍 ROI EN FEEDBACK:")
-            logger.info(f"   - roi_result es None: {roi_result is None}")
+            print(f"🔍 ROI EN FEEDBACK:")
+            print(f"   - roi_result es None: {roi_result is None}")
             if roi_result:
-                logger.info(f"   - is_valid: {roi_result.is_valid}")
-                logger.info(f"   - tiene roi_bbox: {hasattr(roi_result, 'roi_bbox')}")
-                logger.info(f"   - roi_bbox value: {getattr(roi_result, 'roi_bbox', 'NO EXISTE')}")
+                print(f"   - is_valid: {roi_result.is_valid}")
+                print(f"   - tiene roi_bbox: {hasattr(roi_result, 'roi_bbox')}")
+                print(f"   - roi_bbox value: {getattr(roi_result, 'roi_bbox', 'NO EXISTE')}")
             
             session_info = {
                 'current_gesture': session.current_gesture,
@@ -3491,7 +3440,7 @@ class RealEnrollmentSystem:
             True si se inició entrenamiento
         """
         try:
-            logger.info("🧠 VERIFICANDO posibilidad de entrenamiento...")
+            print("🧠 VERIFICANDO posibilidad de entrenamiento...")
             
             users = self.database.list_users()
             sufficient_users = 0
@@ -3503,20 +3452,20 @@ class RealEnrollmentSystem:
                     sufficient_users += 1
                     total_samples += len(user_templates)
             
-            logger.info(f"📊 Estado: {sufficient_users} usuarios, {total_samples} muestras")
+            print(f"📊 Estado: {sufficient_users} usuarios, {total_samples} muestras")
             
             if sufficient_users >= 2:
-                logger.info(f"🎉 DATOS SUFICIENTES!")
-                logger.info(f"   - {sufficient_users} usuarios con 15+ muestras")
-                logger.info(f"   - {total_samples} muestras totales")
-                logger.info("🧠 Iniciando entrenamiento automático...")
+                print(f"🎉 DATOS SUFICIENTES!")
+                print(f"   - {sufficient_users} usuarios con 15+ muestras")
+                print(f"   - {total_samples} muestras totales")
+                print("🧠 Iniciando entrenamiento automático...")
                 
                 try:
                     from app.core.siamese_anatomical_network import get_real_siamese_anatomical_network
                     anatomical_net = get_real_siamese_anatomical_network()
                     
                     if anatomical_net.train_with_real_data(self.database):
-                        logger.info("✅ Red anatómica entrenada")
+                        print("✅ Red anatómica entrenada")
                         anatomical_trained = True
                     else:
                         logger.error("❌ Error entrenando anatómica")
@@ -3530,7 +3479,7 @@ class RealEnrollmentSystem:
                     from app.core.siamese_dynamic_network import get_real_siamese_dynamic_network
                     dynamic_net = get_real_siamese_dynamic_network()
                     if dynamic_net.train_with_real_data(self.database):
-                        logger.info("✅ Red dinámica entrenada")
+                        print("✅ Red dinámica entrenada")
                         dynamic_trained = True
                     else:
                         logger.error("❌ Error entrenando dinámica")
@@ -3541,20 +3490,20 @@ class RealEnrollmentSystem:
                     dynamic_trained = False
                 
                 if anatomical_trained and dynamic_trained:
-                    logger.info("🎯 ENTRENAMIENTO COMPLETO! Desactivando bootstrap...")
+                    print("🎯 ENTRENAMIENTO COMPLETO! Desactivando bootstrap...")
                     self.bootstrap_mode = False
                     self.stats['networks_trained'] = True
-                    logger.info("✅ Sistema en MODO NORMAL")
+                    print("✅ Sistema en MODO NORMAL")
                     return True
                 else:
                     logger.error("⚠️ Entrenamiento parcial - manteniendo bootstrap")
                     return False
                     
             else:
-                logger.info(f"📊 Faltan datos:")
-                logger.info(f"   - Usuarios: {sufficient_users}/2")
-                logger.info(f"   - Requiere 2 usuarios con 15+ muestras")
-                logger.info("🔧 Manteniendo bootstrap")
+                print(f"📊 Faltan datos:")
+                print(f"   - Usuarios: {sufficient_users}/2")
+                print(f"   - Requiere 2 usuarios con 15+ muestras")
+                print("🔧 Manteniendo bootstrap")
                 return False
                 
         except Exception as e:
@@ -3641,11 +3590,11 @@ class RealEnrollmentSystem:
             
             self.workflow.is_running = False
             
-            logger.info(f"Sesión cancelada: {session_id}")
-            logger.info(f"  - Usuario: {session.user_id}")
-            logger.info(f"  - Duración: {session.duration:.1f}s")
-            logger.info(f"  - Muestras: {session.successful_samples}")
-            logger.info(f"  - Bootstrap: {'SÍ' if getattr(session, 'is_bootstrap', False) else 'NO'}")
+            print(f"Sesión cancelada: {session_id}")
+            print(f"  - Usuario: {session.user_id}")
+            print(f"  - Duración: {session.duration:.1f}s")
+            print(f"  - Muestras: {session.successful_samples}")
+            print(f"  - Bootstrap: {'SÍ' if getattr(session, 'is_bootstrap', False) else 'NO'}")
             
             self._finalize_real_session(session)
             return True
@@ -3657,13 +3606,13 @@ class RealEnrollmentSystem:
     def _finalize_real_session(self, session: RealEnrollmentSession):
         """Finaliza una sesión de enrollment."""
         try:
-            logger.info(f"Finalizando sesión: {session.session_id} - Estado: {session.status.value}")
+            print(f"Finalizando sesión: {session.session_id} - Estado: {session.status.value}")
             
             if session.status == EnrollmentStatus.COMPLETED:
-                logger.info("🎯 Sesión completada - ejecutando finalización")
+                print("🎯 Sesión completada - ejecutando finalización")
                 try:
                     self.workflow._finalize_real_enrollment(session)
-                    logger.info("✅ Finalización ejecutada")
+                    print("✅ Finalización ejecutada")
                 except Exception as e:
                     logger.error(f"❌ Error en finalización: {e}")
                     session.status = EnrollmentStatus.FAILED
@@ -3700,14 +3649,14 @@ class RealEnrollmentSystem:
             if not self.active_sessions:
                 self.workflow.cleanup()
             
-            logger.info(f"Sesión finalizada: {session.session_id}")
+            print(f"Sesión finalizada: {session.session_id}")
             
             if session.status == EnrollmentStatus.COMPLETED:
-                logger.info("🎯 VERIFICACIÓN FINAL:")
-                logger.info(f"   - Usuario: {session.user_id}")
-                logger.info(f"   - Muestras válidas: {len([s for s in session.samples if s.is_valid])}")
-                logger.info(f"   - Estado: {session.status.value}")
-                logger.info("   - Datos guardados: ✅")
+                print("🎯 VERIFICACIÓN FINAL:")
+                print(f"   - Usuario: {session.user_id}")
+                print(f"   - Muestras válidas: {len([s for s in session.samples if s.is_valid])}")
+                print(f"   - Estado: {session.status.value}")
+                print("   - Datos guardados: ✅")
             
         except Exception as e:
             logger.error(f"Error finalizando sesión: {e}")
@@ -3745,7 +3694,7 @@ class RealEnrollmentSystem:
             Resultado del entrenamiento
         """
         try:
-            logger.info("🔧 FORZANDO entrenamiento...")
+            print("🔧 FORZANDO entrenamiento...")
             
             training_result = {
                 'attempted': True,
@@ -3777,7 +3726,7 @@ class RealEnrollmentSystem:
     def cleanup(self):
         """Limpia recursos del sistema."""
         try:
-            logger.info("Limpiando sistema de enrollment")
+            print("Limpiando sistema de enrollment")
             
             for session_id in list(self.active_sessions.keys()):
                 self.cancel_enrollment(session_id)
@@ -3785,14 +3734,14 @@ class RealEnrollmentSystem:
             self.workflow.cleanup()
             
             release_camera()
-            logger.info("✅ Verificación: Cámara liberada")
+            print("✅ Verificación: Cámara liberada")
             
             cv2.destroyAllWindows()
             cv2.waitKey(100)
             cv2.destroyAllWindows()
             cv2.waitKey(50)
             
-            logger.info("Sistema de enrollment limpiado")
+            print("Sistema de enrollment limpiado")
             
         except Exception as e:
             logger.error(f"Error limpiando sistema: {e}")

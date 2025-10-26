@@ -144,11 +144,11 @@ class BiometricSystemManager:
         self.dynamic_extractor = None
         self.sequence_manager = None
         
-        logger.info("=" * 80)
-        logger.info("🚀 BiometricSystemManager v2.0.0 Real Edition Iniciado")
-        logger.info("🏗️  Arquitectura: 15 Módulos + Main | 4 Capas Funcionales")
-        logger.info("🎯 Características: Redes siamesas, fusión multimodal, templates biométricos")
-        logger.info("=" * 80)
+        print("=" * 80)
+        print("🚀 BiometricSystemManager v2.0.0 Real Edition Iniciado")
+        print("🏗️  Arquitectura: 15 Módulos + Main | 4 Capas Funcionales")
+        print("🎯 Características: Redes siamesas, fusión multimodal, templates biométricos")
+        print("=" * 80)
         
         self._initialized = True
     
@@ -162,8 +162,8 @@ class BiometricSystemManager:
         """
         missing = []
         
-        logger.info("VERIFICANDO MÓDULOS DEL SISTEMA...")
-        logger.info("=" * 80)
+        print("VERIFICANDO MÓDULOS DEL SISTEMA...")
+        print("=" * 80)
         
         for module_name, class_name in self.REQUIRED_MODULES.items():
             try:
@@ -172,7 +172,7 @@ class BiometricSystemManager:
                 __import__(module_path)
                 
                 self.state.modules_loaded[class_name] = True
-                logger.info(f"✅ {class_name}")
+                print(f"✅ {class_name}")
                 
             except ImportError as e:
                 self.state.modules_loaded[class_name] = False
@@ -182,13 +182,13 @@ class BiometricSystemManager:
         all_available = len(missing) == 0
         
         if all_available:
-            logger.info(f"\n✅ TODOS LOS {len(self.REQUIRED_MODULES)} MÓDULOS DISPONIBLES")
+            print(f"\n✅ TODOS LOS {len(self.REQUIRED_MODULES)} MÓDULOS DISPONIBLES")
         else:
             logger.error(f"\n❌ FALTAN {len(missing)} MÓDULOS:")
             for module in missing:
                 logger.error(f"   - {module}")
         
-        logger.info("=" * 80)
+        print("=" * 80)
         return all_available, missing
     
     def initialize_system(self) -> bool:
@@ -200,9 +200,9 @@ class BiometricSystemManager:
             bool: True si la inicialización fue exitosa
         """
         try:
-            logger.info("\n" + "=" * 80)
-            logger.info("🔧 INICIANDO INICIALIZACIÓN PROGRESIVA DEL SISTEMA")
-            logger.info("=" * 80)
+            print("\n" + "=" * 80)
+            print("🔧 INICIANDO INICIALIZACIÓN PROGRESIVA DEL SISTEMA")
+            print("=" * 80)
             
             # Paso 0: Verificar módulos
             modules_ok, missing = self.verify_modules()
@@ -215,8 +215,8 @@ class BiometricSystemManager:
             # ================================================================
             # NIVEL 1: COMPONENTES BÁSICOS
             # ================================================================
-            logger.info("\n🔧 NIVEL 1: Inicializando Componentes Básicos")
-            logger.info("-" * 80)
+            print("\n🔧 NIVEL 1: Inicializando Componentes Básicos")
+            print("-" * 80)
             
             if not self._initialize_real_basic_components():
                 self.state.error_message = "Error en Nivel 1 (Componentes Básicos)"
@@ -225,13 +225,13 @@ class BiometricSystemManager:
                 return False
             
             self.state.initialization_level = InitializationLevel.BASIC_COMPONENTS
-            logger.info("✅ NIVEL 1 COMPLETADO: Componentes básicos listos\n")
+            print("✅ NIVEL 1 COMPLETADO: Componentes básicos listos\n")
             
             # ================================================================
             # NIVEL 2: EXTRACTORES DE CARACTERÍSTICAS
             # ================================================================
-            logger.info("📊 NIVEL 2: Inicializando Extractores de Características")
-            logger.info("-" * 80)
+            print("📊 NIVEL 2: Inicializando Extractores de Características")
+            print("-" * 80)
             
             if not self._initialize_real_feature_extractors():
                 self.state.error_message = "Error en Nivel 2 (Extractores)"
@@ -241,49 +241,49 @@ class BiometricSystemManager:
             
             self.state.initialization_level = InitializationLevel.FEATURE_EXTRACTION
             self.state.enrollment_active = True  # Enrollment siempre disponible
-            logger.info("✅ NIVEL 2 COMPLETADO: Extractores listos\n")
+            print("✅ NIVEL 2 COMPLETADO: Extractores listos\n")
             
             # ================================================================
             # NIVEL 3: REDES NEURONALES
             # ================================================================
-            logger.info("🧠 NIVEL 3: Verificando Redes Neuronales")
-            logger.info("-" * 80)
+            print("🧠 NIVEL 3: Verificando Redes Neuronales")
+            print("-" * 80)
             
             networks_trained = self._check_real_networks_trained()
             self.state.networks_trained = networks_trained
             self.state.initialization_level = InitializationLevel.NEURAL_NETWORKS
             
             if networks_trained:
-                logger.info("✅ NIVEL 3 COMPLETADO: Redes entrenadas y cargadas\n")
+                print("✅ NIVEL 3 COMPLETADO: Redes entrenadas y cargadas\n")
             else:
                 logger.warning("⚠️ NIVEL 3 PARCIAL: Redes necesitan entrenamiento")
-                logger.info(f"📝 Usuarios actuales: {self.state.users_count}")
-                logger.info(f"📝 Mínimo requerido: 2 usuarios para entrenar")
+                print(f"📝 Usuarios actuales: {self.state.users_count}")
+                print(f"📝 Mínimo requerido: 2 usuarios para entrenar")
                 
                 # Activar modo bootstrap
                 if self.state.users_count < 2:
                     self.state.bootstrap_mode = True
-                    logger.info("🚀 MODO BOOTSTRAP ACTIVADO: Permitir enrollment sin redes\n")
+                    print("🚀 MODO BOOTSTRAP ACTIVADO: Permitir enrollment sin redes\n")
             
             # ================================================================
             # NIVEL 4: PIPELINE COMPLETO
             # ================================================================
-            logger.info("🎯 NIVEL 4: Inicializando Pipeline Completo")
-            logger.info("-" * 80)
+            print("🎯 NIVEL 4: Inicializando Pipeline Completo")
+            print("-" * 80)
             
             if self._initialize_real_authentication_system():
                 self.state.authentication_active = True
                 self.state.initialization_level = InitializationLevel.FULL_PIPELINE
-                logger.info("✅ NIVEL 4 COMPLETADO: Sistema 100% funcional\n")
+                print("✅ NIVEL 4 COMPLETADO: Sistema 100% funcional\n")
             else:
-                logger.info("⚠️ NIVEL 4 PARCIAL: Enrollment disponible, autenticación pendiente\n")
+                print("⚠️ NIVEL 4 PARCIAL: Enrollment disponible, autenticación pendiente\n")
             
             # Resumen final
             self._print_initialization_summary()
             
-            logger.info("=" * 80)
-            logger.info("✅ SISTEMA INICIALIZADO CORRECTAMENTE")
-            logger.info("=" * 80)
+            print("=" * 80)
+            print("✅ SISTEMA INICIALIZADO CORRECTAMENTE")
+            print("=" * 80)
             return True
             
         except Exception as e:
@@ -307,7 +307,7 @@ class BiometricSystemManager:
             # ============================================================
             # 1. BASE DE DATOS
             # ============================================================
-            logger.info("Inicializando Base de Datos...")
+            print("Inicializando Base de Datos...")
             
             self.database = get_biometric_database()
             
@@ -316,27 +316,27 @@ class BiometricSystemManager:
             self.state.users_count = len(users)
             self.state.database_ready = True
             
-            logger.info(f"✅ Base de datos lista: {self.state.users_count} usuarios registrados")
+            print(f"✅ Base de datos lista: {self.state.users_count} usuarios registrados")
             
             # Obtener estadísticas
             try:
                 db_stats = self.database.get_database_stats()
                 total_templates = db_stats.get('total_templates', 0)
-                logger.info(f"📊 Templates totales: {total_templates}")
+                print(f"📊 Templates totales: {total_templates}")
             except:
                 pass
             
             # ============================================================
             # 2. CÁMARA (CRÍTICO: Antes de extractores dinámicos)
             # ============================================================
-            logger.info("Inicializando Cámara...")
+            print("Inicializando Cámara...")
             self.camera_manager = get_camera_manager()
-            logger.info("✅ Cámara (instancia global)")
+            print("✅ Cámara (instancia global)")
             
             # ============================================================
             # 3. MEDIAPIPE (CRÍTICO: Antes de extractores dinámicos)
             # ============================================================
-            logger.info("Inicializando MediaPipe...")
+            print("Inicializando MediaPipe...")
             self.mediapipe_processor = get_mediapipe_processor()
             
             if hasattr(self.mediapipe_processor, 'initialize'):
@@ -344,7 +344,7 @@ class BiometricSystemManager:
                     logger.error("✗ ERROR: No se pudo inicializar MediaPipe")
                     return False
             
-            logger.info("✅ MediaPipe")
+            print("✅ MediaPipe")
             
             # ============================================================
             # 4. VALIDADORES (Opcional pero recomendado)
@@ -352,7 +352,7 @@ class BiometricSystemManager:
             try:
                 self.quality_validator = get_quality_validator()
                 self.reference_area_manager = get_reference_area_manager()
-                logger.info("✅ Validadores de calidad")
+                print("✅ Validadores de calidad")
             except Exception as e:
                 logger.warning(f"⚠️ Validadores no inicializados: {e}")
             
@@ -379,14 +379,14 @@ class BiometricSystemManager:
             # ============================================================
             # 1. ANATOMICAL FEATURES EXTRACTOR
             # ============================================================
-            logger.info("  Inicializando AnatomicalFeaturesExtractor...")
+            print("  Inicializando AnatomicalFeaturesExtractor...")
             self.anatomical_extractor = get_anatomical_features_extractor()
-            logger.info("  ✅ AnatomicalFeaturesExtractor inicializado")
+            print("  ✅ AnatomicalFeaturesExtractor inicializado")
             
             # ============================================================
             # 2. DYNAMIC FEATURES EXTRACTOR (requiere MediaPipe del Nivel 1)
             # ============================================================
-            logger.info("  Inicializando RealDynamicFeaturesExtractor...")
+            print("  Inicializando RealDynamicFeaturesExtractor...")
             
             # CRÍTICO: Verificar que MediaPipe esté disponible
             if self.mediapipe_processor is None:
@@ -394,28 +394,28 @@ class BiometricSystemManager:
                 return False
             
             self.dynamic_extractor = get_real_dynamic_features_extractor()
-            logger.info("  ✅ RealDynamicFeaturesExtractor inicializado")
+            print("  ✅ RealDynamicFeaturesExtractor inicializado")
             
             # ============================================================
             # 3. SEQUENCE MANAGER
             # ============================================================
-            logger.info("  Inicializando SequenceManager...")
+            print("  Inicializando SequenceManager...")
             self.sequence_manager = get_sequence_manager()
-            logger.info("  ✅ SequenceManager inicializado")
+            print("  ✅ SequenceManager inicializado")
             
             # ============================================================
             # 4. ENROLLMENT SYSTEM
             # ============================================================
-            logger.info("Inicializando Sistema de Enrollment...")
+            print("Inicializando Sistema de Enrollment...")
             self.enrollment_system = get_real_enrollment_system()
             
             # Verificar modo bootstrap
             bootstrap = self.enrollment_system.check_bootstrap_mode()
             if bootstrap:
-                logger.info("🚀 Modo Bootstrap detectado - Primeros usuarios")
+                print("🚀 Modo Bootstrap detectado - Primeros usuarios")
                 self.state.bootstrap_mode = True
             
-            logger.info("✅ Sistema de enrollment listo")
+            print("✅ Sistema de enrollment listo")
             
             return True
             
@@ -429,7 +429,7 @@ class BiometricSystemManager:
         Equivalente a _check_real_networks_trained() del MAIN.
         """
         try:
-            logger.info("Verificando estado de redes neuronales...")
+            print("Verificando estado de redes neuronales...")
             
             # Obtener instancias de las redes
             self.anatomical_network = get_real_siamese_anatomical_network()
@@ -439,16 +439,16 @@ class BiometricSystemManager:
             anatomical_trained = self.anatomical_network.is_trained
             dynamic_trained = self.dynamic_network.is_trained
             
-            logger.info(f"  Red anatómica: {'✅ Entrenada' if anatomical_trained else '⚠️ No entrenada'}")
-            logger.info(f"  Red dinámica: {'✅ Entrenada' if dynamic_trained else '⚠️ No entrenada'}")
+            print(f"  Red anatómica: {'✅ Entrenada' if anatomical_trained else '⚠️ No entrenada'}")
+            print(f"  Red dinámica: {'✅ Entrenada' if dynamic_trained else '⚠️ No entrenada'}")
             
             both_trained = anatomical_trained and dynamic_trained
             
             if both_trained:
-                logger.info("✅ Ambas redes están entrenadas y listas")
+                print("✅ Ambas redes están entrenadas y listas")
             else:
                 logger.warning("⚠️ Las redes necesitan entrenamiento")
-                logger.info(f"📝 Se requieren al menos 2 usuarios para entrenar")
+                print(f"📝 Se requieren al menos 2 usuarios para entrenar")
             
             return both_trained
             
@@ -466,10 +466,10 @@ class BiometricSystemManager:
                 logger.warning("⚠️ Redes no entrenadas - Autenticación no disponible aún")
                 return False
             
-            logger.info("Inicializando Sistema de Autenticación...")
+            print("Inicializando Sistema de Autenticación...")
             self.authentication_system = get_real_authentication_system()
             
-            logger.info("✅ Sistema de autenticación listo")
+            print("✅ Sistema de autenticación listo")
             return True
             
         except Exception as e:
@@ -478,16 +478,16 @@ class BiometricSystemManager:
     
     def _print_initialization_summary(self):
         """Imprime resumen de la inicialización."""
-        logger.info("\n" + "=" * 80)
-        logger.info("📊 RESUMEN DE INICIALIZACIÓN")
-        logger.info("=" * 80)
-        logger.info(f"  🎯 Nivel alcanzado: {self.state.initialization_level.name}")
-        logger.info(f"  👥 Usuarios registrados: {self.state.users_count}")
-        logger.info(f"  🧠 Redes entrenadas: {'✅ Sí' if self.state.networks_trained else '⚠️ No'}")
-        logger.info(f"  📝 Enrollment: {'✅ Activo' if self.state.enrollment_active else '❌ Inactivo'}")
-        logger.info(f"  🔐 Autenticación: {'✅ Activa' if self.state.authentication_active else '❌ Inactiva'}")
-        logger.info(f"  🚀 Bootstrap: {'✅ Activo' if self.state.bootstrap_mode else '❌ Inactivo'}")
-        logger.info("=" * 80 + "\n")
+        print("\n" + "=" * 80)
+        print("📊 RESUMEN DE INICIALIZACIÓN")
+        print("=" * 80)
+        print(f"  🎯 Nivel alcanzado: {self.state.initialization_level.name}")
+        print(f"  👥 Usuarios registrados: {self.state.users_count}")
+        print(f"  🧠 Redes entrenadas: {'✅ Sí' if self.state.networks_trained else '⚠️ No'}")
+        print(f"  📝 Enrollment: {'✅ Activo' if self.state.enrollment_active else '❌ Inactivo'}")
+        print(f"  🔐 Autenticación: {'✅ Activa' if self.state.authentication_active else '❌ Inactiva'}")
+        print(f"  🚀 Bootstrap: {'✅ Activo' if self.state.bootstrap_mode else '❌ Inactivo'}")
+        print("=" * 80 + "\n")
     
     def get_system_status(self) -> Dict[str, Any]:
         """
@@ -543,14 +543,14 @@ class BiometricSystemManager:
                 logger.warning(result['message'])
                 return result
             
-            logger.info("=" * 80)
-            logger.info("🚀 INICIANDO ENTRENAMIENTO DE REDES NEURONALES")
-            logger.info("=" * 80)
+            print("=" * 80)
+            print("🚀 INICIANDO ENTRENAMIENTO DE REDES NEURONALES")
+            print("=" * 80)
             
             # Verificar si ya están entrenadas
             if self.state.networks_trained and not force:
-                logger.info("⚠️ Las redes ya están entrenadas")
-                logger.info("💡 Usa force=True para reentrenar")
+                print("⚠️ Las redes ya están entrenadas")
+                print("💡 Usa force=True para reentrenar")
                 result['message'] = "Redes ya entrenadas (usa force=True para reentrenar)"
                 result['anatomical_trained'] = self.anatomical_network.is_trained
                 result['dynamic_trained'] = self.dynamic_network.is_trained
@@ -559,13 +559,13 @@ class BiometricSystemManager:
             # ============================================================
             # ENTRENAR RED ANATÓMICA
             # ============================================================
-            logger.info("\n🧠 Entrenando Red Siamesa Anatómica...")
-            logger.info("-" * 80)
+            print("\n🧠 Entrenando Red Siamesa Anatómica...")
+            print("-" * 80)
             
             anatomical_result = self.anatomical_network.train_with_real_data(self.database)
             
             if anatomical_result['success']:
-                logger.info("✅ Red anatómica entrenada exitosamente")
+                print("✅ Red anatómica entrenada exitosamente")
                 result['anatomical_trained'] = True
             else:
                 logger.error(f"❌ Error entrenando red anatómica: {anatomical_result.get('message', 'Error desconocido')}")
@@ -573,13 +573,13 @@ class BiometricSystemManager:
             # ============================================================
             # ENTRENAR RED DINÁMICA
             # ============================================================
-            logger.info("\n🧠 Entrenando Red Siamesa Dinámica...")
-            logger.info("-" * 80)
+            print("\n🧠 Entrenando Red Siamesa Dinámica...")
+            print("-" * 80)
             
             dynamic_result = self.dynamic_network.train_with_real_data(self.database)
             
             if dynamic_result['success']:
-                logger.info("✅ Red dinámica entrenada exitosamente")
+                print("✅ Red dinámica entrenada exitosamente")
                 result['dynamic_trained'] = True
             else:
                 logger.error(f"❌ Error entrenando red dinámica: {dynamic_result.get('message', 'Error desconocido')}")
@@ -601,12 +601,12 @@ class BiometricSystemManager:
                 
                 result['success'] = True
                 result['message'] = "Ambas redes entrenadas exitosamente"
-                logger.info("\n✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
+                print("\n✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
             else:
                 result['message'] = "Entrenamiento parcial o fallido"
                 logger.warning("\n⚠️ ENTRENAMIENTO INCOMPLETO")
             
-            logger.info("=" * 80)
+            print("=" * 80)
             
             return result
             
@@ -620,23 +620,23 @@ class BiometricSystemManager:
         Limpia recursos del sistema (cámara, MediaPipe, etc).
         """
         try:
-            logger.info("\n🧹 Limpiando recursos del sistema...")
+            print("\n🧹 Limpiando recursos del sistema...")
             
             # Liberar cámara
             try:
                 release_camera()
-                logger.info("  ✅ Cámara liberada")
+                print("  ✅ Cámara liberada")
             except Exception as e:
                 logger.warning(f"  ⚠️ Error liberando cámara: {e}")
             
             # Liberar MediaPipe
             try:
                 release_mediapipe()
-                logger.info("  ✅ MediaPipe liberado")
+                print("  ✅ MediaPipe liberado")
             except Exception as e:
                 logger.warning(f"  ⚠️ Error liberando MediaPipe: {e}")
             
-            logger.info("✅ Recursos liberados")
+            print("✅ Recursos liberados")
             
         except Exception as e:
             logger.error(f"Error en cleanup: {e}")
@@ -695,7 +695,7 @@ class BiometricSystemManager:
                                 self.database._save_template(template)
                                 
                                 regenerated_count += 1
-                                logger.info(f"✅ Template anatómico regenerado para {user_id}")
+                                print(f"✅ Template anatómico regenerado para {user_id}")
                         except Exception as e:
                             logger.error(f"Error regenerando template anatómico: {e}")
                 
@@ -737,7 +737,7 @@ class BiometricSystemManager:
                                 self.database._save_template(template)
                                 
                                 regenerated_count += 1
-                                logger.info(f"✅ Template dinámico regenerado para {user_id}")
+                                print(f"✅ Template dinámico regenerado para {user_id}")
                         except Exception as e:
                             logger.error(f"Error regenerando template dinámico: {e}")
             

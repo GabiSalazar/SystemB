@@ -1,5 +1,5 @@
 {
-  "total_users": 0,
+  "total_users": 1,
   "total_templates": 0,
   "total_verifications": 0,
   "successful_verifications": 0,
@@ -10,10 +10,10 @@
   "good_quality": 0,
   "fair_quality": 0,
   "poor_quality": 0,
-  "total_size_mb": 11.626628875732422,
+  "total_size_mb": 20.122695922851562,
   "index_size_mb": 0.0,
   "backup_size_mb": 0.0,
   "avg_search_time_ms": 0.0,
   "cache_hit_rate": 0.0,
-  "last_updated": 1761410756.9893522
+  "last_updated": 1761450426.7593257
 }

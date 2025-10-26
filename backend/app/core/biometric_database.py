@@ -241,7 +241,7 @@ class VectorIndex:
                 self._build_hierarchical()
             
             self.is_built = True
-            logger.info(f"Índice construido: {len(self.embeddings)} embeddings, estrategia {self.strategy.value}")
+            print(f"Índice construido: {len(self.embeddings)} embeddings, estrategia {self.strategy.value}")
             
         except Exception as e:
             logger.error(f"Error construyendo índice: {e}")
@@ -448,7 +448,7 @@ class VectorIndex:
                 self.search_cache.clear()
                 self.is_built = False
                 
-                logger.info(f"Template {template_id} eliminado del índice")
+                print(f"Template {template_id} eliminado del índice")
                 
         except Exception as e:
             logger.error(f"Error eliminando template: {e}")
@@ -509,7 +509,7 @@ class BiometricDatabase:
         
         self._load_database()
         
-        logger.info(f"BiometricDatabase inicializada en: {self.db_path}")
+        print(f"BiometricDatabase inicializada en: {self.db_path}")
     
     def _load_database_config(self) -> Dict[str, Any]:
         """Carga configuración de la base de datos SIN ENCRIPTACIÓN para debugging."""
@@ -575,7 +575,7 @@ class BiometricDatabase:
             if key_file.exists():
                 try:
                     with open(key_file, 'rb') as f:
-                        logger.info("Clave de encriptación cargada")
+                        print("Clave de encriptación cargada")
                         return f.read()
                 except Exception as e:
                     logger.error(f"Error cargando clave: {e}")
@@ -586,13 +586,13 @@ class BiometricDatabase:
                 with open(key_file, 'wb') as f:
                     f.write(key)
                 os.chmod(key_file, 0o600)
-                logger.info("Nueva clave de encriptación generada")
+                print("Nueva clave de encriptación generada")
             except Exception as e:
                 logger.error(f"Error guardando clave: {e}")
             
             return key
         else:
-            logger.info("Encriptación deshabilitada - generando clave temporal")
+            print("Encriptación deshabilitada - generando clave temporal")
             return Fernet.generate_key()
     
     
@@ -602,18 +602,18 @@ class BiometricDatabase:
             users_loaded = 0
             templates_loaded = 0
             
-            logger.info("🔄 Iniciando carga completa de base de datos...")
+            print("🔄 Iniciando carga completa de base de datos...")
             
             users_dir = self.db_path / 'users'
-            logger.info(f"📁 Buscando usuarios en: {users_dir}")
+            print(f"📁 Buscando usuarios en: {users_dir}")
             
             if users_dir.exists():
                 user_files = list(users_dir.glob('*.json'))
-                logger.info(f"📊 Archivos de usuarios encontrados: {len(user_files)}")
+                print(f"📊 Archivos de usuarios encontrados: {len(user_files)}")
                 
                 for user_file in user_files:
                     try:
-                        logger.info(f"📂 Cargando usuario: {user_file.name}")
+                        print(f"📂 Cargando usuario: {user_file.name}")
                         
                         with open(user_file, 'r', encoding='utf-8') as f:
                             user_data = json.load(f)
@@ -634,11 +634,11 @@ class BiometricDatabase:
                             self.users[user_profile.user_id] = user_profile
                             users_loaded += 1
                             
-                            logger.info(f"✅ Usuario cargado:")
-                            logger.info(f"   👤 ID: {user_profile.user_id}")
-                            logger.info(f"   📝 Nombre: {user_profile.username}")
-                            logger.info(f"   🎯 Gestos: {user_profile.gesture_sequence}")
-                            logger.info(f"   📊 Templates: {user_profile.total_enrollments}")
+                            print(f"✅ Usuario cargado:")
+                            print(f"   👤 ID: {user_profile.user_id}")
+                            print(f"   📝 Nombre: {user_profile.username}")
+                            print(f"   🎯 Gestos: {user_profile.gesture_sequence}")
+                            print(f"   📊 Templates: {user_profile.total_enrollments}")
                             
                         except Exception as profile_error:
                             logger.error(f"❌ Error creando UserProfile: {profile_error}")
@@ -648,19 +648,19 @@ class BiometricDatabase:
                         logger.error(f"❌ Error leyendo {user_file.name}: {file_error}")
                         continue
             else:
-                logger.info("📁 Directorio de usuarios no existe, creándolo...")
+                print("📁 Directorio de usuarios no existe, creándolo...")
                 users_dir.mkdir(parents=True, exist_ok=True)
             
             templates_dir = self.db_path / 'templates'
-            logger.info(f"📁 Buscando templates en: {templates_dir}")
+            print(f"📁 Buscando templates en: {templates_dir}")
             
             if templates_dir.exists():
                 template_files = list(templates_dir.glob('*.json'))
-                logger.info(f"📊 Archivos de templates encontrados: {len(template_files)}")
+                print(f"📊 Archivos de templates encontrados: {len(template_files)}")
                 
                 for template_file in template_files:
                     try:
-                        logger.info(f"📂 Cargando template: {template_file.name}")
+                        print(f"📂 Cargando template: {template_file.name}")
                         
                         with open(template_file, 'r', encoding='utf-8') as f:
                             template_data = json.load(f)
@@ -684,7 +684,7 @@ class BiometricDatabase:
                                     checksum=template_data.get('checksum', '')
                                 )
                                 
-                                logger.info(f"   🔧 Template Bootstrap cargado: {template.gesture_name}")
+                                print(f"   🔧 Template Bootstrap cargado: {template.gesture_name}")
                                 
                             else:
                                 print(f"🎯 DEBUG: Template normal detectado: {template_file.name}")
@@ -786,12 +786,12 @@ class BiometricDatabase:
                                 except Exception as idx_error:
                                     print(f"   ❌ Error índice dinámico: {idx_error}")
                             
-                            logger.info(f"✅ Template cargado:")
-                            logger.info(f"   🆔 ID: {template.template_id}")
-                            logger.info(f"   👤 Usuario: {template.user_id}")
-                            logger.info(f"   🤚 Gesto: {template.gesture_name}")
-                            logger.info(f"   📊 Calidad: {template.quality_score:.2f}")
-                            logger.info(f"   🔧 Bootstrap: {is_bootstrap}")
+                            print(f"✅ Template cargado:")
+                            print(f"   🆔 ID: {template.template_id}")
+                            print(f"   👤 Usuario: {template.user_id}")
+                            print(f"   🤚 Gesto: {template.gesture_name}")
+                            print(f"   📊 Calidad: {template.quality_score:.2f}")
+                            print(f"   🔧 Bootstrap: {is_bootstrap}")
                             
                         except Exception as template_error:
                             logger.error(f"❌ Error creando template: {template_error}")
@@ -803,11 +803,11 @@ class BiometricDatabase:
                         logger.error(f"❌ Error leyendo {template_file.name}: {file_error}")
                         continue
             else:
-                logger.info("📁 Directorio templates no existe, creándolo...")
+                print("📁 Directorio templates no existe, creándolo...")
                 templates_dir.mkdir(parents=True, exist_ok=True)
             
             try:
-                logger.info("🔍 Validando consistencia usuario ↔ template...")
+                print("🔍 Validando consistencia usuario ↔ template...")
                 
                 inconsistencies_found = 0
                 templates_added = 0
@@ -829,8 +829,8 @@ class BiometricDatabase:
                     
                     if missing_in_lists:
                         inconsistencies_found += 1
-                        logger.info(f"⚠️ Inconsistencia usuario {user_id}:")
-                        logger.info(f"   📁 Templates sin listar: {len(missing_in_lists)}")
+                        print(f"⚠️ Inconsistencia usuario {user_id}:")
+                        print(f"   📁 Templates sin listar: {len(missing_in_lists)}")
                         
                         for tid in missing_in_lists:
                             template = self.templates[tid]
@@ -841,7 +841,7 @@ class BiometricDatabase:
                             elif template.template_type == TemplateType.MULTIMODAL:
                                 user_profile.multimodal_templates.append(tid)
                             templates_added += 1
-                            logger.info(f"      ✅ Agregado: {tid[:8]}... ({template.template_type.value})")
+                            print(f"      ✅ Agregado: {tid[:8]}... ({template.template_type.value})")
                         
                         user_profile.total_enrollments = (
                             len(user_profile.anatomical_templates) + 
@@ -852,26 +852,26 @@ class BiometricDatabase:
                         self._save_user(user_profile)
                     
                     else:
-                        logger.info(f"✅ Usuario {user_id}: consistente ({len(actual_template_ids)} templates)")
+                        print(f"✅ Usuario {user_id}: consistente ({len(actual_template_ids)} templates)")
                 
                 if inconsistencies_found > 0:
-                    logger.info(f"🔧 Consistencia corregida:")
-                    logger.info(f"   👥 Usuarios afectados: {inconsistencies_found}")
-                    logger.info(f"   ➕ Templates agregados: {templates_added}")
+                    print(f"🔧 Consistencia corregida:")
+                    print(f"   👥 Usuarios afectados: {inconsistencies_found}")
+                    print(f"   ➕ Templates agregados: {templates_added}")
                 
             except Exception as consistency_error:
                 logger.error(f"❌ Error validando consistencia: {consistency_error}")
             
             try:
-                logger.info("🔨 Construyendo índices vectoriales...")
+                print("🔨 Construyendo índices vectoriales...")
                 self.anatomical_index.build_index()
                 self.dynamic_index.build_index()
-                logger.info("✅ Índices construidos")
+                print("✅ Índices construidos")
             except Exception as idx_error:
                 logger.error(f"❌ Error construyendo índices: {idx_error}")
             
             try:
-                logger.info("📊 Actualizando estadísticas...")
+                print("📊 Actualizando estadísticas...")
                 
                 self.stats.total_users = users_loaded
                 self.stats.total_templates = templates_loaded
@@ -898,27 +898,27 @@ class BiometricDatabase:
                 
                 self._update_stats()
                 
-                logger.info("✅ Estadísticas actualizadas")
+                print("✅ Estadísticas actualizadas")
                 
             except Exception as stats_error:
                 logger.error(f"❌ Error actualizando estadísticas: {stats_error}")
             
-            logger.info("=" * 60)
-            logger.info("✅ CARGA COMPLETADA")
-            logger.info("=" * 60)
-            logger.info(f"👥 USUARIOS: {users_loaded}")
-            logger.info(f"🧬 TEMPLATES: {templates_loaded}")
-            logger.info(f"   📊 Anatómicos: {anatomical_count}")
-            logger.info(f"   🔄 Dinámicos: {dynamic_count}")
-            logger.info(f"   🔗 Multimodales: {multimodal_count}")
-            logger.info(f"   🔧 Bootstrap: {bootstrap_count}")
-            logger.info("=" * 60)
+            print("=" * 60)
+            print("✅ CARGA COMPLETADA")
+            print("=" * 60)
+            print(f"👥 USUARIOS: {users_loaded}")
+            print(f"🧬 TEMPLATES: {templates_loaded}")
+            print(f"   📊 Anatómicos: {anatomical_count}")
+            print(f"   🔄 Dinámicos: {dynamic_count}")
+            print(f"   🔗 Multimodales: {multimodal_count}")
+            print(f"   🔧 Bootstrap: {bootstrap_count}")
+            print("=" * 60)
             
             if users_loaded > 0:
-                logger.info("👥 USUARIOS REGISTRADOS:")
+                print("👥 USUARIOS REGISTRADOS:")
                 for user_id, user in self.users.items():
                     total = len(user.anatomical_templates) + len(user.dynamic_templates) + len(user.multimodal_templates)
-                    logger.info(f"   • {user.username} ({user_id}) - {total} templates")
+                    print(f"   • {user.username} ({user_id}) - {total} templates")
     
             return True
             
@@ -962,7 +962,7 @@ class BiometricDatabase:
                 self.stats.total_users += 1
                 self._update_stats()
                 
-                logger.info(f"Usuario creado: {user_id} ({username})")
+                print(f"Usuario creado: {user_id} ({username})")
                 
                 return True
                 
@@ -974,10 +974,10 @@ class BiometricDatabase:
         """Almacena un perfil de usuario completo."""
         try:
             with self.lock:
-                logger.info(f"Almacenando perfil de usuario: {user_profile.user_id}")
+                print(f"Almacenando perfil de usuario: {user_profile.user_id}")
                 
                 if user_profile.user_id in self.users:
-                    logger.info(f"Usuario {user_profile.user_id} existe - actualizando")
+                    print(f"Usuario {user_profile.user_id} existe - actualizando")
                     
                     existing_user = self.users[user_profile.user_id]
                     
@@ -1001,11 +1001,11 @@ class BiometricDatabase:
                     
                     self._save_user(existing_user)
                     
-                    logger.info(f"Usuario {user_profile.user_id} actualizado")
+                    print(f"Usuario {user_profile.user_id} actualizado")
                     return True
                     
                 else:
-                    logger.info(f"Creando nuevo usuario: {user_profile.user_id}")
+                    print(f"Creando nuevo usuario: {user_profile.user_id}")
                     
                     self.users[user_profile.user_id] = user_profile
                     
@@ -1021,7 +1021,7 @@ class BiometricDatabase:
                     self.stats.total_users += 1
                     self._update_stats()
                     
-                    logger.info(f"Usuario {user_profile.user_id} creado exitosamente")
+                    print(f"Usuario {user_profile.user_id} creado exitosamente")
                     return True
                     
         except Exception as e:
@@ -1032,14 +1032,14 @@ class BiometricDatabase:
         """Almacena template biométrico."""
         try:
             with self.lock:
-                logger.info(f"Almacenando template: {template.template_id}")
+                print(f"Almacenando template: {template.template_id}")
                 
                 if template.user_id not in self.users:
                     logger.error(f"Usuario {template.user_id} no existe para template {template.template_id}")
                     return False
                 
                 if template.template_id in self.templates:
-                    logger.info(f"Template {template.template_id} ya existe - actualizando")
+                    print(f"Template {template.template_id} ya existe - actualizando")
                 
                 complete_template = template
                 
@@ -1049,7 +1049,7 @@ class BiometricDatabase:
                     else:
                         complete_template.checksum = "not_available"
                 except Exception as e:
-                    logger.info(f"No se pudo calcular checksum: {e}")
+                    print(f"No se pudo calcular checksum: {e}")
                     complete_template.checksum = "error_calculating"
                 
                 self.templates[template.template_id] = complete_template
@@ -1061,9 +1061,9 @@ class BiometricDatabase:
                             template.template_id, 
                             template.user_id
                         )
-                        logger.info(f"Template anatómico agregado al índice")
+                        print(f"Template anatómico agregado al índice")
                     except Exception as e:
-                        logger.info(f"Error índice anatómico: {e}")
+                        print(f"Error índice anatómico: {e}")
                         
                 if hasattr(template, 'dynamic_embedding') and template.dynamic_embedding is not None:
                     try:
@@ -1072,39 +1072,39 @@ class BiometricDatabase:
                             template.template_id, 
                             template.user_id
                         )
-                        logger.info(f"Template dinámico agregado al índice vectorial")
+                        print(f"Template dinámico agregado al índice vectorial")
                     except Exception as e:
-                        logger.info(f"Error índice dinámico: {e}")
+                        print(f"Error índice dinámico: {e}")
                 
                 user_profile = self.users[template.user_id]
                 
                 if template.template_type == TemplateType.ANATOMICAL:
                     if template.template_id not in user_profile.anatomical_templates:
                         user_profile.anatomical_templates.append(template.template_id)
-                        logger.info(f"Template anatómico agregado al perfil del usuario")
+                        print(f"Template anatómico agregado al perfil del usuario")
                 elif template.template_type == TemplateType.DYNAMIC:
                     if template.template_id not in user_profile.dynamic_templates:
                         user_profile.dynamic_templates.append(template.template_id)
-                        logger.info(f"Template dinámico agregado al perfil del usuario")
+                        print(f"Template dinámico agregado al perfil del usuario")
                 else:
                     if template.template_id not in user_profile.multimodal_templates:
                         user_profile.multimodal_templates.append(template.template_id)
-                        logger.info(f"Template multimodal agregado al perfil del usuario")
+                        print(f"Template multimodal agregado al perfil del usuario")
                 
                 user_profile.total_enrollments += 1
                 user_profile.updated_at = time.time()
                 
                 try:
                     self._save_template(complete_template)
-                    logger.info(f"Template guardado en disco")
+                    print(f"Template guardado en disco")
                 except Exception as e:
-                    logger.info(f"Error guardando template: {e}")
+                    print(f"Error guardando template: {e}")
                     
                 try:
                     self._save_user(user_profile)
-                    logger.info(f"Perfil actualizado")
+                    print(f"Perfil actualizado")
                 except Exception as e:
-                    logger.info(f"Error actualizando usuario: {e}")
+                    print(f"Error actualizando usuario: {e}")
                 
                 self.stats.total_templates += 1
                 if template.template_type == TemplateType.ANATOMICAL:
@@ -1117,16 +1117,16 @@ class BiometricDatabase:
                 try:
                     self._update_stats()
                 except Exception as e:
-                    logger.info(f"Error actualizando estadísticas: {e}")
+                    print(f"Error actualizando estadísticas: {e}")
                 
                 try:
                     self.anatomical_index.build_index()
                     self.dynamic_index.build_index()
-                    logger.info(f"Índices vectorialesreconstruidos")
+                    print(f"Índices vectorialesreconstruidos")
                 except Exception as e:
-                    logger.info(f"Error reconstruyendo índices: {e}")
+                    print(f"Error reconstruyendo índices: {e}")
                 
-                logger.info(f"✅ Template {template.template_id} almacenado")
+                print(f"✅ Template {template.template_id} almacenado")
                 return True
                 
         except Exception as e:
@@ -1253,7 +1253,7 @@ class BiometricDatabase:
                 
                 self._update_stats()
                 
-                logger.info(f"Template enrollado: {template_id}")
+                print(f"Template enrollado: {template_id}")
                 
                 return template_id
                 
@@ -1350,7 +1350,7 @@ class BiometricDatabase:
                 self.stats.total_verifications += 1
                 self._update_stats()
                 
-                logger.info(f"Verificación: {len(results)} matches")
+                print(f"Verificación: {len(results)} matches")
                 
                 return results[:max_results]
                 
@@ -1409,7 +1409,7 @@ class BiometricDatabase:
                 self.stats.total_users -= 1
                 self._update_stats()
                 
-                logger.info(f"Usuario eliminado: {user_id}")
+                print(f"Usuario eliminado: {user_id}")
                 
                 return True
                 
@@ -1464,7 +1464,7 @@ class BiometricDatabase:
                 
                 self._update_stats()
                 
-                logger.info(f"Template eliminado: {template_id}")
+                print(f"Template eliminado: {template_id}")
                 
                 return True
                 
@@ -1858,7 +1858,7 @@ class BiometricDatabase:
             
             self._cleanup_old_backups()
             
-            logger.info(f"Backup creado: {backup_archive}")
+            print(f"Backup creado: {backup_archive}")
             return True
             
         except Exception as e:
@@ -1878,7 +1878,7 @@ class BiometricDatabase:
                 backup_files.sort(key=lambda x: x.stat().st_mtime)
                 for old_backup in backup_files[:-self.config['max_backups']]:
                     old_backup.unlink()
-                    logger.info(f"Backup antiguo eliminado: {old_backup.name}")
+                    print(f"Backup antiguo eliminado: {old_backup.name}")
                     
         except Exception as e:
             logger.error(f"Error limpiando backups: {e}")
@@ -1965,7 +1965,7 @@ class BiometricDatabase:
             with open(export_path, 'w') as f:
                 json.dump(export_data, f, indent=2, default=str)
             
-            logger.info(f"Base de datos exportada a: {export_path}")
+            print(f"Base de datos exportada a: {export_path}")
             return True
             
         except Exception as e:
@@ -1987,9 +1987,11 @@ class BiometricDatabase:
             'last_backup': 'N/A',
             'integrity_status': 'OK'
         }
-    
+
     def enroll_template_bootstrap(self, user_id: str,
                         anatomical_features: Optional[np.ndarray] = None,
+                        dynamic_features: Optional[np.ndarray] = None,
+                        temporal_sequence: Optional[np.ndarray] = None,
                         gesture_name: str = "unknown",
                         quality_score: float = 1.0,
                         confidence: float = 1.0,
@@ -1998,7 +2000,7 @@ class BiometricDatabase:
         try:
             with self.lock:
                 if user_id not in self.users:
-                    logger.info(f"🆕 Usuario {user_id} no existe - Creando automáticamente")
+                    print(f"🆕 Usuario {user_id} no existe - Creando automáticamente")
                     
                     username = "Usuario Bootstrap"
                     if sample_metadata and 'session_username' in sample_metadata:
@@ -2020,7 +2022,7 @@ class BiometricDatabase:
                     self.users[user_id] = user_profile
                     self._save_user(user_profile)
                     
-                    logger.info(f"✅ Usuario {user_id} creado automáticament: {username}")
+                    print(f"✅ Usuario {user_id} creado automáticament: {username}")
                 
                 if anatomical_features is None:
                     logger.error("Se requieren características anatómicas en Bootstrap")
@@ -2078,14 +2080,14 @@ class BiometricDatabase:
                         data_source_found = sample_metadata.get('data_source', 'real_enrollment_capture')
                         is_real_temporal = True  # SIEMPRE real si viene de metadata de muestra
                         
-                        logger.info(f"✅ MÉTODO PRINCIPAL: Secuencia temporal REAL encontrada en metadata: {temporal_sequence.shape}")
-                        logger.info(f"   📊 Fuente: {data_source_found}")
-                        logger.info(f"   📊 Longitud: {sample_metadata.get('sequence_length', len(temporal_sequence))} frames")
+                        print(f"✅ MÉTODO PRINCIPAL: Secuencia temporal REAL encontrada en metadata: {temporal_sequence.shape}")
+                        print(f"   📊 Fuente: {data_source_found}")
+                        print(f"   📊 Longitud: {sample_metadata.get('sequence_length', len(temporal_sequence))} frames")
                     
                     # ✅ MÉTODO ALTERNATIVO: BUSCAR EN ENROLLMENT SYSTEM ACTIVO (SOLO SI NO HAY DATOS)
                     elif temporal_sequence is None:  
                         try:
-                            logger.info("🔄 MÉTODO ALTERNATIVO: Buscando en sesiones activas...")
+                            print("🔄 MÉTODO ALTERNATIVO: Buscando en sesiones activas...")
                             # Buscar directamente en este objeto si es el enrollment system
                             if hasattr(self, 'active_sessions'):
                                 for session_id, session in self.active_sessions.items():
@@ -2102,15 +2104,15 @@ class BiometricDatabase:
                                                 data_source_found = getattr(sample, 'metadata', {}).get('data_source', 'session_sample_real')
                                                 is_real_temporal = True  # SIEMPRE real si viene de muestra de sesión
                                                 
-                                                logger.info(f"✅ MÉTODO ALTERNATIVO: Secuencia temporal REAL desde muestra: {temporal_sequence.shape}")
-                                                logger.info(f"   📊 Sample ID: {sample.sample_id}")
-                                                logger.info(f"   📊 Gesto: {sample.gesture_name}")
+                                                print(f"✅ MÉTODO ALTERNATIVO: Secuencia temporal REAL desde muestra: {temporal_sequence.shape}")
+                                                print(f"   📊 Sample ID: {sample.sample_id}")
+                                                print(f"   📊 Gesto: {sample.gesture_name}")
                                                 break
                                         
                                         if temporal_sequence is not None:
                                             break
                         except Exception as e:
-                            logger.info(f"Método alternativo falló: {e}")
+                            print(f"Método alternativo falló: {e}")
                     
                     # MÉTODO DE FALLBACK: SOLO SI NO HAY DATOS REALES (ÚLTIMO RECURSO)
                     elif temporal_sequence is None: 
@@ -2180,11 +2182,11 @@ class BiometricDatabase:
                         # Guardar template dinámico en disco
                         self._save_template_bootstrap(dynamic_template)
                         
-                        logger.info(f"✅ Template dinámico bootstrap creado: {dynamic_template_id}")
-                        logger.info(f"   📊 Secuencia temporal: {len(temporal_sequence)} frames x {temporal_sequence.shape[1]} características")
-                        logger.info(f"   📊 Fuente datos: {final_data_source}")
-                        logger.info(f"   📊 Es temporal real: {is_real_temporal}")
-                        logger.info(f"   🎯 100% REAL: {'SÍ ✅' if is_real_temporal else 'NO ❌ (Fallback)'}")
+                        print(f"✅ Template dinámico bootstrap creado: {dynamic_template_id}")
+                        print(f"   📊 Secuencia temporal: {len(temporal_sequence)} frames x {temporal_sequence.shape[1]} características")
+                        print(f"   📊 Fuente datos: {final_data_source}")
+                        print(f"   📊 Es temporal real: {is_real_temporal}")
+                        print(f"   🎯 100% REAL: {'SÍ ✅' if is_real_temporal else 'NO ❌ (Fallback)'}")
                         
                         # También guardar referencia en template anatómico para debugging
                         anatomical_template.metadata['paired_dynamic_template'] = dynamic_template_id
@@ -2216,11 +2218,11 @@ class BiometricDatabase:
                 user_profile = self.users[user_id]
                 
                 user_profile.anatomical_templates.append(anatomical_template_id)
-                logger.info(f"➕ Template anatómico: {anatomical_template_id}")
+                print(f"➕ Template anatómico: {anatomical_template_id}")
                 
                 if dynamic_template_id:
                     user_profile.dynamic_templates.append(dynamic_template_id)
-                    logger.info(f"➕ Template dinámico: {dynamic_template_id}")
+                    print(f"➕ Template dinámico: {dynamic_template_id}")
                 
                 templates_created = 2 if dynamic_template_id else 1
                 user_profile.total_enrollments += templates_created
@@ -2229,7 +2231,7 @@ class BiometricDatabase:
                 
                 if gesture_name not in user_profile.gesture_sequence:
                     user_profile.gesture_sequence.append(gesture_name)
-                    logger.info(f"➕ Agregado gesto '{gesture_name}' a secuencia del usuario {user_id}")
+                    print(f"➕ Agregado gesto '{gesture_name}' a secuencia del usuario {user_id}")
                 
                 self._save_user(user_profile)
                 
@@ -2253,11 +2255,11 @@ class BiometricDatabase:
                 
                 self._update_stats()
                 
-                logger.info(f"🎯 BOOTSTRAP COMPLETO:")
-                logger.info(f"   📊 Templates creados: {templates_created}")
-                logger.info(f"   🧬 Anatómico: {anatomical_template_id}")
+                print(f"🎯 BOOTSTRAP COMPLETO:")
+                print(f"   📊 Templates creados: {templates_created}")
+                print(f"   🧬 Anatómico: {anatomical_template_id}")
                 if dynamic_template_id:
-                    logger.info(f"   ⏱️ Dinámico: {dynamic_template_id}")
+                    print(f"   ⏱️ Dinámico: {dynamic_template_id}")
                 
                      # ✅ VERIFICACIÓN FINAL ROBUSTA
                     dynamic_template = self.templates.get(dynamic_template_id)
@@ -2265,16 +2267,16 @@ class BiometricDatabase:
                         is_real_final = dynamic_template.metadata['is_real_temporal']
                         data_source_final = dynamic_template.metadata.get('data_source', 'unknown')
                         
-                        logger.info(f"   📊 Fuente de datos: {data_source_final}")
-                        logger.info(f"   📊 Datos temporales: {'🎯 100% REALES ✅' if is_real_final else '❌ Fallback desde anatómicos (SINTÉTICOS)'}")
-                        logger.info(f"   🔍 Verificación final: is_real_temporal = {is_real_final}")
+                        print(f"   📊 Fuente de datos: {data_source_final}")
+                        print(f"   📊 Datos temporales: {'🎯 100% REALES ✅' if is_real_final else '❌ Fallback desde anatómicos (SINTÉTICOS)'}")
+                        print(f"   🔍 Verificación final: is_real_temporal = {is_real_final}")
                     else:
                         logger.warning(f"   ⚠️ No se pudo verificar estado de datos temporales en template dinámico")
                 else:
-                    logger.info(f"   ⚠️ Sin template dinámico (no se encontraron datos temporales)")
+                    print(f"   ⚠️ Sin template dinámico (no se encontraron datos temporales)")
                 
-                logger.info(f"   🎯 Gesto: {gesture_name}")
-                logger.info(f"   📈 Total enrollments: {user_profile.total_enrollments}")
+                print(f"   🎯 Gesto: {gesture_name}")
+                print(f"   📈 Total enrollments: {user_profile.total_enrollments}")
                 return anatomical_template_id
                 
         except Exception as e:
@@ -2319,7 +2321,7 @@ class BiometricDatabase:
                     if template.metadata.get('bootstrap_mode', False):
                         bootstrap_templates.append(template)
                 
-                logger.info(f"Convirtiendo {len(bootstrap_templates)} templates Bootstrap")
+                print(f"Convirtiendo {len(bootstrap_templates)} templates Bootstrap")
                 
                 converted_count = 0
                 for template in bootstrap_templates:
@@ -2362,7 +2364,7 @@ class BiometricDatabase:
                 
                 self._update_stats()
                 
-                logger.info(f"✅ Convertidos {converted_count}/{len(bootstrap_templates)} templates Bootstrap")
+                print(f"✅ Convertidos {converted_count}/{len(bootstrap_templates)} templates Bootstrap")
                 
                 return converted_count
                 
