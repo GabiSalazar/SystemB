@@ -809,6 +809,8 @@ class RealEnrollmentWorkflow:
                 progress_callback=progress_callback,
                 error_callback=error_callback
             )
+            session.all_frames_buffer = []
+            logger.info("Buffer de sesión INICIALIZADO al crear sesión")
 
             session.is_bootstrap = self.bootstrap_mode
             
@@ -2644,7 +2646,7 @@ class RealEnrollmentSystem:
     def process_enrollment_frame_with_image(self, session_id: str, frame_image: np.ndarray) -> Dict[str, Any]:
         """
         Procesa un frame de enrollment recibido desde el frontend.
-        ✅ CORREGIDO: Guardado durante captura en modo Bootstrap según notebook
+       
         
         Args:
             session_id: ID de la sesión activa
@@ -2678,6 +2680,26 @@ class RealEnrollmentSystem:
             
             session = self.active_sessions[session_id]
             
+            # ✅✅✅ VALIDACIÓN CRÍTICA: Rechazar frames si enrollment ya completado
+            if session.status == EnrollmentStatus.COMPLETED:
+                print(f"⚠️ Enrollment ya completado - rechazando frame")
+                return {
+                    'session_id': session_id,
+                    'status': EnrollmentStatus.COMPLETED.value,
+                    'phase': EnrollmentPhase.ENROLLMENT_COMPLETE.value,
+                    'progress': 100.0,
+                    'current_gesture': session.current_gesture,
+                    'current_gesture_index': session.current_gesture_index,
+                    'total_gestures': len(session.gesture_sequence),
+                    'samples_collected': len(session.samples),
+                    'samples_needed': session.total_samples_needed,
+                    'sample_captured': False,
+                    'session_completed': True,
+                    'message': '✅ Enrollment completado - frames adicionales ignorados',
+                    'is_real_processing': True,
+                    'bootstrap_mode': self.bootstrap_mode
+                }
+            
             # ✅ Procesar frame directamente con MediaPipe
             processing_result = self.workflow.mediapipe_processor.process_frame(frame_image)
 
@@ -2702,6 +2724,24 @@ class RealEnrollmentSystem:
 
             hand_result = processing_result.hand_result
             gesture_result = processing_result.gesture_result
+            
+            # ✅✅✅ AGREGAR FRAME AL BUFFER DE SESIÓN (SIEMPRE, ANTES DE VALIDACIONES)
+            # Esto permite acumular 200+ frames para secuencia fluida robusta
+            if not hasattr(session, 'all_frames_buffer'):
+                session.all_frames_buffer = []
+                logger.info("🆕 Buffer de sesión INICIALIZADO")
+            
+            session.all_frames_buffer.append({
+                'landmarks': hand_result.landmarks,
+                'world_landmarks': hand_result.world_landmarks,
+                'gesture': session.current_gesture,
+                'confidence': hand_result.confidence,
+                'timestamp': time.time()
+            })
+            
+            # Log cada 10 frames para no saturar
+            if len(session.all_frames_buffer) % 10 == 0:
+                logger.info(f"📊 Buffer sesión: {len(session.all_frames_buffer)} frames acumulados")
             
             # Verificar confianza básica
             if hand_result.confidence < 0.8:
@@ -2822,21 +2862,10 @@ class RealEnrollmentSystem:
                     hand_result.confidence,
                     hand_result.world_landmarks
                 )
-                print(f"Frame agregado. Buffer: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
-                # TAMBIÉN agregar a buffer de sesión para secuencia fluida
-                if not hasattr(session, 'all_frames_buffer'):
-                    session.all_frames_buffer = []
+                print(f"Frame agregado. Buffer extractor: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
                 
-                session.all_frames_buffer.append({
-                    'landmarks': hand_result.landmarks,
-                    'world_landmarks': hand_result.world_landmarks,
-                    'gesture': session.current_gesture,
-                    'timestamp': time.time()
-                })
-                
-                print(f"Buffer sesión: {len(session.all_frames_buffer)} frames totales")
             except Exception as e:
-                print(f"❌ Error agregando frame: {e}")
+                print(f"❌ Error agregando frame al extractor: {e}")
             
             # ✅ EXTRAER CARACTERÍSTICAS DINÁMICAS
             dynamic_features = None
@@ -2874,7 +2903,7 @@ class RealEnrollmentSystem:
                     import traceback
                     print(traceback.format_exc())
             else:
-                print(f"⏳ Buffer: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
+                print(f"⏳ Buffer extractor: {len(self.workflow.dynamic_extractor.temporal_buffer)}/50")
             
             # ✅ CREAR MUESTRA COMPLETA
             sample_id = f"{session.user_id}_{session.current_gesture}_{len(session.samples)}"
@@ -2911,6 +2940,7 @@ class RealEnrollmentSystem:
             
             print(f"✅ Muestra creada: {sample_id}")
             print(f"   Total muestras en sesión: {len(session.samples)}")
+            print(f"   Buffer sesión total: {len(session.all_frames_buffer)} frames")
             
             # ✅✅✅ GUARDAR EN MODO BOOTSTRAP (CORREGIDO SEGÚN NOTEBOOK) ✅✅✅
             if self.bootstrap_mode:
@@ -2939,7 +2969,7 @@ class RealEnrollmentSystem:
                         user_id=session.user_id,
                         anatomical_features=anatomical_features.complete_vector,
                         gesture_name=session.current_gesture,
-                        quality_score=0.85,  # Valor por defecto
+                        quality_score=0.85,
                         confidence=float(hand_result.confidence),
                         sample_metadata=sample_metadata
                     )
@@ -3001,6 +3031,7 @@ class RealEnrollmentSystem:
                         print("=" * 70)
                         print("🔧 MODO BOOTSTRAP: DATOS YA GUARDADOS DURANTE CAPTURA")
                         print(f"   Total muestras guardadas: {len(session.samples)}")
+                        print(f"   Buffer sesión: {len(session.all_frames_buffer)} frames totales")
                         print("=" * 70)
                         
                         from time import sleep as time_sleep
@@ -3043,72 +3074,76 @@ class RealEnrollmentSystem:
                         # ========== AGREGAR TEMPLATE DE SECUENCIA FLUIDA ==========
                         try:
                             print("🎬 GENERANDO TEMPLATE DE SECUENCIA FLUIDA")
+                            print(f"📊 Buffer de sesión total: {len(session.all_frames_buffer)} frames")
                             
-                            # Usar buffer de sesión en lugar del extractor
-                            if hasattr(session, 'all_frames_buffer'):
+                            # ✅✅✅ USAR BUFFER DE SESIÓN (200+ frames acumulados)
+                            if hasattr(session, 'all_frames_buffer') and len(session.all_frames_buffer) >= 50:
                                 buffer_size = len(session.all_frames_buffer)
-                                print(f"📊 Buffer de sesión: {buffer_size} frames")
+                                print(f"✅ Buffer suficiente: {buffer_size} frames")
                                 
-                                if buffer_size >= 50:
-                                    # Tomar los últimos 50 frames
-                                    recent_frames = session.all_frames_buffer[-50:]
-                                    temporal_sequence = []
+                                # Tomar los últimos 50 frames de alta calidad
+                                recent_frames = session.all_frames_buffer[-50:]
+                                temporal_sequence = []
+                                
+                                for frame_data in recent_frames:
+                                    frame_features = self.workflow._extract_single_frame_features(
+                                        frame_data['landmarks'],
+                                        frame_data.get('world_landmarks')
+                                    )
+                                    if frame_features is not None and len(frame_features) == 320:
+                                        temporal_sequence.append(frame_features)
+                                
+                                if len(temporal_sequence) >= 50:
+                                    sequence_array = np.array(temporal_sequence[:50], dtype=np.float32)
                                     
-                                    for frame_data in recent_frames:
-                                        frame_features = self._extract_single_frame_features(
-                                            frame_data['landmarks'],
-                                            frame_data.get('world_landmarks')
-                                        )
-                                        if frame_features is not None and len(frame_features) == 320:
-                                            temporal_sequence.append(frame_features)
+                                    import uuid
+                                    template_id = f"{session.user_id}_dynamic_sequence_{int(time.time()*1000)}_{uuid.uuid4().hex[:8]}"
                                     
-                                    if len(temporal_sequence) >= 50:
-                                        sequence_array = np.array(temporal_sequence[:50], dtype=np.float32)
-                                        embedding = np.mean(sequence_array, axis=0).flatten()[:128]
-                                        
-                                        import uuid
-                                        template_id = f"{session.user_id}_dynamic_sequence_{int(time.time()*1000)}_{uuid.uuid4().hex[:8]}"
-                                        
-                                        from app.core.biometric_database import BiometricTemplate, TemplateType
-                                        
-                                        template = BiometricTemplate(
-                                            user_id=session.user_id,
-                                            template_id=template_id,
-                                            template_type=TemplateType.DYNAMIC,
-                                            anatomical_embedding=None,
-                                            dynamic_embedding=embedding,
-                                            gesture_name="FLUID_SEQUENCE",
-                                            quality_score=0.9,
-                                            confidence=0.9,
-                                            enrollment_session=session.session_id,
-                                            metadata={
-                                                'is_sequence': True,
-                                                'temporal_sequence': sequence_array.tolist(),
-                                                'sequence_frames': 50,
-                                                'bootstrap_mode': True
-                                            }
-                                        )
-                                        
-                                        success = self.database.store_biometric_template(template)
-                                        
-                                        if success:
-                                            print("="*70)
-                                            print(f"✅ TEMPLATE SECUENCIA GUARDADO: {template_id}")
-                                            print("="*70)
-                                        else:
-                                            logger.error("❌ Error guardando template")
+                                    from app.core.biometric_database import BiometricTemplate, TemplateType
+                                    
+                                    template = BiometricTemplate(
+                                        user_id=session.user_id,
+                                        template_id=template_id,
+                                        template_type=TemplateType.DYNAMIC,
+                                        anatomical_embedding=None,
+                                        dynamic_embedding=None,
+                                        gesture_name="FLUID_SEQUENCE",
+                                        quality_score=0.9,
+                                        confidence=0.9,
+                                        enrollment_session=session.session_id,
+                                        metadata={
+                                            'is_sequence': True,
+                                            'temporal_sequence': sequence_array.tolist(),
+                                            'sequence_frames': 50,
+                                            'bootstrap_mode': True,
+                                            'total_frames_captured': buffer_size,
+                                            'source': 'accumulated_session_buffer'
+                                        }
+                                    )
+                                    
+                                    success = self.database.store_biometric_template(template)
+                                    
+                                    if success:
+                                        print("="*70)
+                                        print(f"✅ TEMPLATE SECUENCIA FLUIDA GUARDADO: {template_id}")
+                                        print(f"   📊 Frames totales capturados: {buffer_size}")
+                                        print(f"   📊 Frames usados en template: 50")
+                                        print("="*70)
                                     else:
-                                        logger.warning(f"⚠️ Frames válidos insuficientes: {len(temporal_sequence)}/50")
+                                        logger.error("❌ Error guardando template de secuencia")
                                 else:
-                                    logger.warning(f"⚠️ Buffer insuficiente: {buffer_size}/50")
+                                    logger.warning(f"⚠️ Frames válidos insuficientes: {len(temporal_sequence)}/50")
                             else:
-                                logger.error("❌ No existe buffer de sesión")
+                                buffer_size = len(session.all_frames_buffer) if hasattr(session, 'all_frames_buffer') else 0
+                                logger.warning(f"⚠️ Buffer insuficiente para secuencia fluida: {buffer_size}/50")
+                                print(f"⚠️ Se necesitan al menos 50 frames, pero solo se capturaron {buffer_size}")
                                 
                         except Exception as e:
-                            logger.error(f"❌ ERROR: {e}")
+                            logger.error(f"❌ ERROR generando template de secuencia: {e}")
                             import traceback
                             logger.error(traceback.format_exc())
                         # =========================================================
+                        
                         return {
                             **response_base,
                             'status': EnrollmentStatus.COMPLETED.value,
@@ -3117,7 +3152,8 @@ class RealEnrollmentSystem:
                             'session_completed': True,
                             'sample_captured': True,
                             'message': '¡Enrollment completado! Todas las muestras guardadas.',
-                            'user_saved': True
+                            'user_saved': True,
+                            'total_frames_captured': len(session.all_frames_buffer)
                         }
                     
                     else:
