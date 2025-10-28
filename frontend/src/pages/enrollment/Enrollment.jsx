@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { enrollmentApi } from '../../lib/api/enrollment'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Badge } from '../../components/ui'
 import WebcamCapture from '../../components/camera/WebcamCapture'
-import { UserPlus, CheckCircle, XCircle, Camera, Hand } from 'lucide-react'
+import { UserPlus, CheckCircle, XCircle, Camera, Hand, AlertCircle } from 'lucide-react'
 
 export default function Enrollment() {
   const [step, setStep] = useState('form')
@@ -59,6 +59,17 @@ export default function Enrollment() {
       setSessionStatus(response)
 
       if (response.session_completed) {
+        // Verificar si ahora se puede entrenar
+        try {
+          const bootstrapStatus = await enrollmentApi.getBootstrapStatus()
+          setSessionStatus(prev => ({
+            ...prev,
+            can_train_now: bootstrapStatus.can_train && !bootstrapStatus.networks_trained
+          }))
+        } catch (err) {
+          console.error('Error checking bootstrap status:', err)
+        }
+        
         setStep('success')
       }
     } catch (err) {
@@ -316,6 +327,31 @@ export default function Enrollment() {
             <p className="text-gray-600 mb-6">
               El usuario <strong>{username}</strong> ha sido registrado exitosamente.
             </p>
+
+            {/* Verificar si ahora se puede entrenar */}
+            {sessionStatus?.can_train_now && (
+              <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg max-w-md mx-auto">
+                <div className="flex items-start gap-3 text-left">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+                      ¡Sistema listo para entrenamiento!
+                    </h3>
+                    <p className="text-sm text-yellow-700 mb-3">
+                      Ya tienes suficientes usuarios registrados. Ahora puedes entrenar las redes neuronales en el Dashboard.
+                    </p>
+                    <Button 
+                      size="sm"
+                      className="bg-yellow-600 hover:bg-yellow-700"
+                      onClick={() => window.location.href = '/'}
+                    >
+                      Ir al Dashboard →
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Button onClick={resetForm}>
               <UserPlus className="w-4 h-4 mr-2" />
               Registrar Otro Usuario

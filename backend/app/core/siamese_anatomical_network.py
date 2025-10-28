@@ -2,7 +2,7 @@
 # MÓDULO 9: SIAMESE_ANATOMICAL_NETWORK
 # Red Siamesa para características anatómicas
 # =============================================================================
-
+import os
 import numpy as np
 import logging
 from typing import List, Dict, Tuple, Optional, Any, Union

@@ -522,6 +522,7 @@ class BiometricSystemManager:
     def train_networks(self, force: bool = False) -> Dict[str, Any]:
         """
         Entrena o reentrena las redes neuronales.
+        CORREGIDO: Manejo de RealTrainingHistory objects
         
         Args:
             force: Si True, fuerza reentrenamiento incluso si ya están entrenadas
@@ -544,13 +545,14 @@ class BiometricSystemManager:
                 return result
             
             print("=" * 80)
-            print("🚀 INICIANDO ENTRENAMIENTO DE REDES NEURONALES")
+            print("INICIANDO ENTRENAMIENTO DE REDES NEURONALES")
             print("=" * 80)
             
             # Verificar si ya están entrenadas
             if self.state.networks_trained and not force:
-                print("⚠️ Las redes ya están entrenadas")
-                print("💡 Usa force=True para reentrenar")
+                print("Las redes ya están entrenadas")
+                print("Usa force=True para reentrenar")
+                result['success'] = True
                 result['message'] = "Redes ya entrenadas (usa force=True para reentrenar)"
                 result['anatomical_trained'] = self.anatomical_network.is_trained
                 result['dynamic_trained'] = self.dynamic_network.is_trained
@@ -559,30 +561,62 @@ class BiometricSystemManager:
             # ============================================================
             # ENTRENAR RED ANATÓMICA
             # ============================================================
-            print("\n🧠 Entrenando Red Siamesa Anatómica...")
+            print("\nEntrenando Red Siamesa Anatómica...")
             print("-" * 80)
             
             anatomical_result = self.anatomical_network.train_with_real_data(self.database)
             
-            if anatomical_result['success']:
-                print("✅ Red anatómica entrenada exitosamente")
+            # CORREGIDO: Verificar tipo de resultado
+            if hasattr(anatomical_result, '__dict__'):
+                # Es un objeto RealTrainingHistory
+                anatomical_success = getattr(anatomical_result, 'success', True)
+                anatomical_message = getattr(anatomical_result, 'message', 'Training completed')
+            elif isinstance(anatomical_result, dict):
+                # Ya es un diccionario
+                anatomical_success = anatomical_result.get('success', False)
+                anatomical_message = anatomical_result.get('message', 'Unknown result')
+            else:
+                # Resultado desconocido, asumimos éxito si no hay excepción
+                anatomical_success = True
+                anatomical_message = 'Training completed'
+            
+            if anatomical_success:
+                print("Red anatómica entrenada exitosamente")
                 result['anatomical_trained'] = True
             else:
-                logger.error(f"❌ Error entrenando red anatómica: {anatomical_result.get('message', 'Error desconocido')}")
+                logger.error(f"Error entrenando red anatómica: {anatomical_message}")
+                result['message'] = f"Error en red anatómica: {anatomical_message}"
+                return result
             
             # ============================================================
             # ENTRENAR RED DINÁMICA
             # ============================================================
-            print("\n🧠 Entrenando Red Siamesa Dinámica...")
+            print("\nEntrenando Red Siamesa Dinámica...")
             print("-" * 80)
             
             dynamic_result = self.dynamic_network.train_with_real_data(self.database)
             
-            if dynamic_result['success']:
-                print("✅ Red dinámica entrenada exitosamente")
+            # CORREGIDO: Verificar tipo de resultado
+            if hasattr(dynamic_result, '__dict__'):
+                # Es un objeto RealTrainingHistory
+                dynamic_success = getattr(dynamic_result, 'success', True)
+                dynamic_message = getattr(dynamic_result, 'message', 'Training completed')
+            elif isinstance(dynamic_result, dict):
+                # Ya es un diccionario
+                dynamic_success = dynamic_result.get('success', False)
+                dynamic_message = dynamic_result.get('message', 'Unknown result')
+            else:
+                # Resultado desconocido, asumimos éxito si no hay excepción
+                dynamic_success = True
+                dynamic_message = 'Training completed'
+            
+            if dynamic_success:
+                print("Red dinámica entrenada exitosamente")
                 result['dynamic_trained'] = True
             else:
-                logger.error(f"❌ Error entrenando red dinámica: {dynamic_result.get('message', 'Error desconocido')}")
+                logger.error(f"Error entrenando red dinámica: {dynamic_message}")
+                result['message'] = f"Error en red dinámica: {dynamic_message}"
+                return result
             
             # ============================================================
             # RESULTADO FINAL
@@ -595,24 +629,37 @@ class BiometricSystemManager:
                 
                 # Inicializar autenticación si no estaba activa
                 if not self.state.authentication_active:
-                    if self._initialize_real_authentication_system():
-                        self.state.authentication_active = True
-                        self.state.initialization_level = InitializationLevel.FULL_PIPELINE
+                    try:
+                        if self._initialize_real_authentication_system():
+                            self.state.authentication_active = True
+                            self.state.initialization_level = InitializationLevel.FULL_PIPELINE
+                            print("Sistema de autenticación activado")
+                    except Exception as auth_error:
+                        logger.warning(f"No se pudo activar autenticación: {auth_error}")
+                        # No es crítico, las redes están entrenadas
                 
                 result['success'] = True
                 result['message'] = "Ambas redes entrenadas exitosamente"
-                print("\n✅ ENTRENAMIENTO COMPLETADO EXITOSAMENTE")
+                print("\nENTRENAMIENTO COMPLETADO EXITOSAMENTE")
+                print(f"   - Red Anatómica: Entrenada")
+                print(f"   - Red Dinámica: Entrenada")
+                print(f"   - Usuarios entrenados: {self.state.users_count}")
+                print(f"   - Autenticación: {'Activa' if self.state.authentication_active else 'Inactiva'}")
             else:
                 result['message'] = "Entrenamiento parcial o fallido"
-                logger.warning("\n⚠️ ENTRENAMIENTO INCOMPLETO")
+                logger.warning("\nENTRENAMIENTO INCOMPLETO")
             
             print("=" * 80)
             
             return result
             
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
             result['message'] = f"Error durante entrenamiento: {str(e)}"
-            logger.error(f"❌ Error en entrenamiento: {e}", exc_info=True)
+            logger.error(f"Error en entrenamiento: {e}", exc_info=True)
+            print(f"\nERROR EN ENTRENAMIENTO:")
+            print(error_trace)
             return result
     
     def cleanup_resources(self):
