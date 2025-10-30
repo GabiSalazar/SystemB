@@ -1,13 +1,13 @@
 {
   "embedding_dim": 64,
   "input_dim": 180,
-  "optimal_threshold": 0.9672285914421082,
+  "optimal_threshold": 0.9390549659729004,
   "is_trained": true,
   "training_samples": 938,
   "users_trained_count": 2,
   "total_genuine_pairs": 552,
   "total_impostor_pairs": 386,
-  "save_timestamp": "2025-10-28T11:09:38.396589",
+  "save_timestamp": "2025-10-30T08:42:14.112396",
   "version": "2.0",
   "config": {
     "hidden_layers": [
@@ -48,7 +48,7 @@
     "eer": 0.0,
     "auc_score": 1.0,
     "accuracy": 1.0,
-    "threshold": 0.9672285914421082,
+    "threshold": 0.9390549659729004,
     "precision": 1.0,
     "recall": 1.0,
     "f1_score": 1.0

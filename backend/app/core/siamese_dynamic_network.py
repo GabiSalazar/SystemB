@@ -751,8 +751,6 @@ class RealSiameseDynamicNetwork:
                                 # PROCESAR SECUENCIAS INDIVIDUALES (USUARIOS NORMALES)
                                 if has_individual_data:
                                     logger.info(f"       🎯 {len(individual_sequences)} secuencias individuales")
-                                elif has_temporal_sequence:
-                                    logger.info(f"       Secuencia: {len(temporal_sequence)} frames")
                                     
                                     sequences_loaded = 0
                                     for seq_idx, sequence in enumerate(individual_sequences):
@@ -785,19 +783,15 @@ class RealSiameseDynamicNetwork:
                                                 user_temporal_samples.append(dynamic_sample)
                                                 sequences_loaded += 1
                                     
-                                    genuine_pairs = sequences_loaded * (sequences_loaded - 1) // 2 if sequences_loaded >= 2 else 0
-                                    
                                     logger.info(f"       ✅ Secuencias preservadas cargadas: {sequences_loaded}")
-                                    logger.info(f"       📊 Pares genuinos generados: {genuine_pairs}")
-                                    logger.info(f"       🎯 Usuario incluido en entrenamiento dinámico")
-                                
+
                                 # PROCESAR SECUENCIA TEMPORAL (BOOTSTRAP)
                                 elif has_temporal_sequence:
+                                    logger.info(f"       Secuencia: {len(temporal_sequence)} frames")
+                                    
                                     temporal_array = np.array(temporal_sequence, dtype=np.float32)
                                     
                                     if len(temporal_array.shape) == 2 and temporal_array.shape[1] == self.feature_dim:
-                                        samples_used = template.metadata.get('samples_used', 1)
-                                        
                                         dynamic_sample = RealDynamicSample(
                                             user_id=user.user_id,
                                             sequence_id=template.template_id,
@@ -820,9 +814,9 @@ class RealSiameseDynamicNetwork:
                                         user_temporal_samples.append(dynamic_sample)
                                         logger.info(f"       ✅ Bootstrap: {len(temporal_sequence)} frames")
                                     else:
-                                        logger.warning(f"   ⚠️ Dimensiones incorrectas: {temporal_array.shape} (esperado: [N, {self.feature_dim}])")
-                            else:
-                                logger.warning(f"   ⚠️ Template sin datos temporales válidos")
+                                        logger.warning(f"       ⚠️ Dimensiones incorrectas: {temporal_array.shape}")
+                                else:
+                                    logger.warning(f"   ⚠️ Template sin datos temporales válidos")
                         
                         except Exception as e:
                             logger.error(f"   ❌ Error procesando template: {e}")

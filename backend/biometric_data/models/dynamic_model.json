@@ -1,0 +1,55 @@
+{
+  "embedding_dim": 128,
+  "sequence_length": 50,
+  "feature_dim": 320,
+  "config": {
+    "sequence_processing": "bidirectional_lstm",
+    "lstm_units": [
+      128,
+      64
+    ],
+    "dropout_rate": 0.3,
+    "recurrent_dropout": 0.2,
+    "dense_layers": [
+      256,
+      128
+    ],
+    "temporal_pooling": "attention",
+    "sequence_normalization": "layer_norm",
+    "use_masking": true,
+    "return_sequences": false,
+    "stateful": false,
+    "max_sequence_length": 50,
+    "min_sequence_length": 5,
+    "learning_rate": 0.0005,
+    "batch_size": 32,
+    "epochs": 100,
+    "early_stopping_patience": 10,
+    "reduce_lr_patience": 8,
+    "min_lr": 1e-06,
+    "loss_function": "contrastive",
+    "margin": 0.8,
+    "distance_metric": "euclidean",
+    "min_samples_per_user": 15,
+    "min_users_for_training": 2,
+    "quality_threshold": 80.0,
+    "temporal_consistency_threshold": 0.7,
+    "use_temporal_augmentation": true,
+    "time_shift_range": 0.1,
+    "speed_variation_range": 0.2,
+    "noise_level": 0.01
+  },
+  "optimal_threshold": 0.3843843843843844,
+  "is_trained": true,
+  "training_samples": 64,
+  "users_trained_count": 2,
+  "save_timestamp": "2025-10-30T09:38:34.839493",
+  "version": "2.0",
+  "metrics": {
+    "eer": 0.0,
+    "auc_score": 1.0,
+    "accuracy": 1.0,
+    "far": 0.0,
+    "frr": 0.0
+  }
+}
