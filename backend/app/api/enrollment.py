@@ -3,7 +3,7 @@ API Endpoints para gestión de enrollment/registro biométrico
 VERSIÓN CORREGIDA CON BOOTSTRAP STATUS
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 import base64
@@ -43,8 +43,7 @@ class ProcessFrameRequest(BaseModel):
     """Request para procesar frame"""
     session_id: str
     frame_data: str  # Base64 encoded image
-    current_gesture_index: int
-
+    current_gesture_index: Optional[int] = None
 
 class ProcessFrameResponse(BaseModel):
     """Response de procesamiento de frame"""
@@ -164,23 +163,29 @@ async def start_enrollment(request: EnrollmentStartRequest):
         raise HTTPException(status_code=500, detail=error_detail)
 
 
-@router.post("/enrollment/process-frame", response_model=ProcessFrameResponse)
+@router.post("/enrollment/process-frame")
 async def process_enrollment_frame(request: ProcessFrameRequest):
     """
     Procesa un frame durante el enrollment.
-    
-    Args:
-        request: Session ID, frame en base64 y gesture index
-    
-    Returns:
-        ProcessFrameResponse con resultado del procesamiento
     """
     try:
         manager = get_system_manager()
         
+        if not manager.enrollment_system:
+            raise HTTPException(
+                status_code=503,
+                detail="Sistema de enrollment no disponible"
+            )
+        
+        # Validar que frame_data no esté vacío
+        if not request.frame_data or request.frame_data == '{}':
+            raise HTTPException(
+                status_code=400,
+                detail="frame_data está vacío o es inválido"
+            )
+        
         # Decodificar imagen base64
         try:
-            # Remover prefijo data:image si existe
             frame_data = request.frame_data
             if ',' in frame_data:
                 frame_data = frame_data.split(',')[1]
@@ -191,8 +196,11 @@ async def process_enrollment_frame(request: ProcessFrameRequest):
             
             if frame is None:
                 raise ValueError("No se pudo decodificar la imagen")
+            
+            print(f"✅ Frame decodificado: {frame.shape}")
                 
         except Exception as e:
+            print(f"❌ Error decodificando imagen: {e}")
             raise HTTPException(
                 status_code=400,
                 detail=f"Error decodificando imagen: {str(e)}"
@@ -202,29 +210,31 @@ async def process_enrollment_frame(request: ProcessFrameRequest):
         result = manager.process_enrollment_frame(
             session_id=request.session_id,
             frame=frame,
-            current_gesture_index=request.current_gesture_index
+            current_gesture_index=request.current_gesture_index or 0  # ✅ Usar valor por defecto
         )
         
-        return ProcessFrameResponse(
-            success=result.get('success', False),
-            message=result.get('message', ''),
-            current_gesture=result.get('current_gesture', ''),
-            current_gesture_index=result.get('current_gesture_index', 0),
-            samples_captured=result.get('samples_captured', 0),
-            samples_needed=result.get('samples_needed', 0),
-            gesture_completed=result.get('gesture_completed', False),
-            all_gestures_completed=result.get('all_gestures_completed', False),
-            quality_score=result.get('quality_score'),
-            feedback=result.get('feedback'),
-            error=result.get('error')
-        )
+        print(f"📊 Resultado: {result.get('message', 'Sin mensaje')}")
+        
+        return {
+            "success": result.get('success', False),
+            "message": result.get('message', ''),
+            "current_gesture": result.get('current_gesture', ''),
+            "current_gesture_index": result.get('current_gesture_index', 0),
+            "samples_captured": result.get('samples_captured', 0),
+            "samples_needed": result.get('samples_needed', 0),
+            "gesture_completed": result.get('gesture_completed', False),
+            "all_gestures_completed": result.get('all_gestures_completed', False),
+            "quality_score": result.get('quality_score'),
+            "feedback": result.get('feedback'),
+            "error": result.get('error')
+        }
         
     except HTTPException:
         raise
     except Exception as e:
         import traceback
         error_detail = f"Error procesando frame: {str(e)}\n{traceback.format_exc()}"
-        print(f"❌ ERROR: {error_detail}")
+        print(f"❌ ERROR CRÍTICO: {error_detail}")
         raise HTTPException(status_code=500, detail=error_detail)
 
 

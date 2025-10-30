@@ -41,12 +41,12 @@ export const enrollmentApi = {
    * Procesa un frame durante el enrollment
    * IMPORTANTE: frameData debe ser base64 encoded
    */
-  processFrame: async (sessionId, frameData, currentGestureIndex) => {
+  processFrame: async (sessionId, frameData) => {
     try {
       const { data } = await apiClient.post('/enrollment/process-frame', {
         session_id: sessionId,
         frame_data: frameData,
-        current_gesture_index: currentGestureIndex
+        //current_gesture_index: currentGestureIndex
       })
       return data
     } catch (error) {

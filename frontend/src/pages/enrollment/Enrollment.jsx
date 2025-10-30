@@ -51,14 +51,33 @@ export default function Enrollment() {
     }
   }
 
-  const handleFrameCapture = async (frameBlob) => {
+  const handleFrameCapture = async (frameData) => {  // ✅ Cambiar nombre: frameBlob → frameData
     if (!sessionId) return
 
     try {
-      const response = await enrollmentApi.processFrame(sessionId, frameBlob)
-      setSessionStatus(response)
+      // ✅ CORRECCIÓN: processFrame ahora solo necesita 2 parámetros
+      const response = await enrollmentApi.processFrame(sessionId, frameData)
+      
+      // ✅ DEBUG: Ver qué llega del servidor
+      console.log('📊 Respuesta del servidor:', response)
+      
+      // ✅ CORRECCIÓN CRÍTICA: Actualizar el estado con TODA la respuesta
+      setSessionStatus({
+        ...response,
+        // Mapear campos del backend al frontend
+        progress: response.progress_percentage || 
+                  ((response.samples_captured || 0) / (response.samples_needed || 21)) * 100,
+        current_gesture: response.current_gesture,
+        samples_collected: response.samples_captured || 0,
+        samples_needed: response.samples_needed || 21,
+        message: response.message || response.feedback || 'Procesando...',
+        session_completed: response.all_gestures_completed || response.session_completed || false
+      })
 
-      if (response.session_completed) {
+      // ✅ Verificar si se completó
+      if (response.all_gestures_completed || response.session_completed) {
+        console.log('🎉 ENROLLMENT COMPLETADO!')
+        
         // Verificar si ahora se puede entrenar
         try {
           const bootstrapStatus = await enrollmentApi.getBootstrapStatus()
@@ -73,7 +92,8 @@ export default function Enrollment() {
         setStep('success')
       }
     } catch (err) {
-      console.error('Error procesando frame:', err)
+      console.error('❌ Error procesando frame:', err)
+      setError(err.message || 'Error procesando frame')
     }
   }
 

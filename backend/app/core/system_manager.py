@@ -819,6 +819,317 @@ class BiometricSystemManager:
             return {}
 
 
+    # ====================================================================
+    # MÉTODOS DE ENROLLMENT (WRAPPERS PARA LA API)
+    # ====================================================================
+
+    def start_enrollment_session(self, user_id: str, username: str, 
+                                gesture_sequence: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Inicia sesión de enrollment (wrapper para la API).
+        
+        Args:
+            user_id: ID del usuario
+            username: Nombre del usuario
+            gesture_sequence: Secuencia de gestos (opcional)
+        
+        Returns:
+            Dict con información de la sesión
+        """
+        try:
+            if not self.enrollment_system:
+                return {
+                    'success': False,
+                    'message': 'Sistema de enrollment no disponible'
+                }
+            
+            # Usar secuencia por defecto si no se proporciona
+            if not gesture_sequence:
+                gesture_sequence = ["thumbs_up", "peace", "ok"]
+            
+            # Iniciar enrollment
+            session_id = self.enrollment_system.start_real_enrollment(
+                user_id=user_id,
+                username=username,
+                gesture_sequence=gesture_sequence,
+                progress_callback=None,
+                error_callback=None
+            )
+            
+            # Obtener información de la sesión
+            session = self.enrollment_system.active_sessions.get(session_id)
+            
+            if not session:
+                return {
+                    'success': False,
+                    'message': 'Error obteniendo sesión'
+                }
+            
+            return {
+                'success': True,
+                'message': 'Sesión iniciada correctamente',
+                'session': {
+                    'session_id': session_id,
+                    'user_id': user_id,
+                    'username': username,
+                    'gesture_sequence': gesture_sequence,
+                    'total_gestures': len(gesture_sequence),
+                    'samples_per_gesture': self.enrollment_system.config.samples_per_gesture,
+                    'total_samples_needed': len(gesture_sequence) * self.enrollment_system.config.samples_per_gesture,
+                    'bootstrap_mode': self.enrollment_system.bootstrap_mode
+                }
+            }
+            
+        except Exception as e:
+            print(f"Error iniciando enrollment session: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }
+
+    def process_enrollment_frame(self, session_id: str, frame: np.ndarray, 
+                                current_gesture_index: int) -> Dict[str, Any]:
+        """
+        Procesa un frame de enrollment (wrapper para la API).
+        
+        Args:
+            session_id: ID de la sesión
+            frame: Frame de la cámara (numpy array BGR)
+            current_gesture_index: Índice del gesto actual
+        
+        Returns:
+            Dict con resultado del procesamiento
+        """
+        try:
+            if not self.enrollment_system:
+                return {
+                    'success': False,
+                    'message': 'Sistema de enrollment no disponible'
+                }
+            
+            # Procesar frame usando el método correcto
+            result = self.enrollment_system.process_enrollment_frame_with_image(
+                session_id=session_id,
+                frame_image=frame
+            )
+            
+            # Adaptar respuesta al formato esperado por la API
+            session = self.enrollment_system.active_sessions.get(session_id)
+            
+            if not session:
+                return {
+                    'success': False,
+                    'message': 'Sesión no encontrada',
+                    'error': 'Session not found'
+                }
+            
+            samples_this_gesture = len([
+                s for s in session.samples 
+                if s.gesture_name == session.current_gesture
+            ])
+            
+            gesture_completed = samples_this_gesture >= self.enrollment_system.config.samples_per_gesture
+            all_completed = session.status.value == 'completed'
+            
+            return {
+                'success': result.get('sample_captured', False) or True,
+                'message': result.get('message', 'Frame procesado'),
+                'current_gesture': session.current_gesture,
+                'current_gesture_index': session.current_gesture_index,
+                'samples_captured': samples_this_gesture,
+                'samples_needed': self.enrollment_system.config.samples_per_gesture,
+                'gesture_completed': gesture_completed,
+                'all_gestures_completed': all_completed,
+                'quality_score': result.get('quality_score'),
+                'feedback': result.get('message'),
+                'error': result.get('error')
+            }
+            
+        except Exception as e:
+            print(f"Error procesando frame: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error: {str(e)}',
+                'error': str(e)
+            }
+
+    def get_enrollment_session_status(self, session_id: str) -> Dict[str, Any]:
+        """
+        Obtiene estado de una sesión de enrollment.
+        
+        Args:
+            session_id: ID de la sesión
+        
+        Returns:
+            Dict con estado de la sesión
+        """
+        try:
+            if not self.enrollment_system:
+                return {
+                    'success': False,
+                    'message': 'Sistema de enrollment no disponible'
+                }
+            
+            session = self.enrollment_system.active_sessions.get(session_id)
+            
+            if not session:
+                return {
+                    'success': False,
+                    'message': 'Sesión no encontrada'
+                }
+            
+            samples_this_gesture = len([
+                s for s in session.samples 
+                if s.gesture_name == session.current_gesture
+            ])
+            
+            return {
+                'success': True,
+                'message': 'Estado obtenido',
+                'session': {
+                    'active': session.status.value in ['in_progress', 'collecting_samples'],
+                    'user_id': session.user_id,
+                    'username': session.username,
+                    'current_gesture': session.current_gesture,
+                    'current_gesture_index': session.current_gesture_index,
+                    'total_gestures': len(session.gesture_sequence),
+                    'samples_captured': samples_this_gesture,
+                    'samples_needed': self.enrollment_system.config.samples_per_gesture,
+                    'progress_percentage': session.progress_percentage
+                }
+            }
+            
+        except Exception as e:
+            print(f"Error obteniendo estado: {e}")
+            return {
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }
+
+    def complete_enrollment_session(self, session_id: str) -> Dict[str, Any]:
+        """
+        Completa una sesión de enrollment.
+        
+        Args:
+            session_id: ID de la sesión
+        
+        Returns:
+            Dict con resultado
+        """
+        try:
+            if not self.enrollment_system:
+                return {
+                    'success': False,
+                    'message': 'Sistema de enrollment no disponible'
+                }
+            
+            session = self.enrollment_system.active_sessions.get(session_id)
+            
+            if not session:
+                return {
+                    'success': False,
+                    'message': 'Sesión no encontrada'
+                }
+            
+            # Finalizar enrollment
+            self.enrollment_system.workflow._finalize_real_enrollment(session)
+            
+            return {
+                'success': True,
+                'message': 'Enrollment completado',
+                'user_id': session.user_id,
+                'username': session.username,
+                'templates_created': len(session.samples),
+                'enrollment_time': session.duration
+            }
+            
+        except Exception as e:
+            print(f"Error completando enrollment: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }
+
+    def cancel_enrollment_session(self, session_id: str) -> Dict[str, Any]:
+        """
+        Cancela una sesión de enrollment.
+        
+        Args:
+            session_id: ID de la sesión
+        
+        Returns:
+            Dict con resultado
+        """
+        try:
+            if not self.enrollment_system:
+                return {
+                    'success': False,
+                    'message': 'Sistema de enrollment no disponible'
+                }
+            
+            success = self.enrollment_system.cancel_enrollment(session_id)
+            
+            return {
+                'success': success,
+                'message': 'Sesión cancelada' if success else 'Error cancelando sesión'
+            }
+            
+        except Exception as e:
+            print(f"Error cancelando enrollment: {e}")
+            return {
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }
+
+    def list_enrollment_sessions(self) -> List[Dict[str, Any]]:
+        """Lista todas las sesiones activas."""
+        try:
+            if not self.enrollment_system:
+                return []
+            
+            sessions = []
+            for session_id, session in self.enrollment_system.active_sessions.items():
+                sessions.append({
+                    'session_id': session_id,
+                    'user_id': session.user_id,
+                    'username': session.username,
+                    'status': session.status.value,
+                    'progress': session.progress_percentage
+                })
+            
+            return sessions
+            
+        except Exception as e:
+            print(f"Error listando sesiones: {e}")
+            return []
+
+    def get_available_gestures(self) -> List[str]:
+        """Obtiene lista de gestos disponibles."""
+        return ["thumbs_up", "peace", "ok", "fist", "palm"]
+
+    def get_enrollment_config(self) -> Dict[str, Any]:
+        """Obtiene configuración de enrollment."""
+        try:
+            if not self.enrollment_system:
+                return {}
+            
+            return {
+                'samples_per_gesture': self.enrollment_system.config.samples_per_gesture,
+                'quality_threshold': self.enrollment_system.config.quality_threshold,
+                'min_confidence': self.enrollment_system.config.min_confidence,
+                'bootstrap_mode': self.enrollment_system.bootstrap_mode
+            }
+            
+        except Exception as e:
+            print(f"Error obteniendo config: {e}")
+            return {}
+    
 # ====================================================================
 # FUNCIONES GLOBALES
 # ====================================================================

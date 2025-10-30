@@ -87,12 +87,28 @@ export default function WebcamCapture({ onFrame, isActive = true }) {
       const ctx = canvas.getContext('2d')
       ctx.drawImage(video, 0, 0)
       
-      // Convertir a blob JPEG con calidad 90%
-      canvas.toBlob((blob) => {
-        if (blob && onFrame) {
-          onFrame(blob)
+      // ✅ CAMBIO CRÍTICO: Convertir a base64 en lugar de blob
+      try {
+        // Convertir canvas a base64 (data URL)
+        const base64Image = canvas.toDataURL('image/jpeg', 0.9)
+        
+        // Verificar que se generó correctamente
+        if (base64Image && base64Image.startsWith('data:image')) {
+          // DEBUG (opcional - puedes comentar estas líneas después)
+          console.log('📸 Frame capturado:', {
+            type: typeof base64Image,
+            length: base64Image.length,
+            preview: base64Image.substring(0, 50) + '...'
+          })
+          
+          // Enviar base64 al callback
+          onFrame(base64Image)
+        } else {
+          console.warn('⚠️ Frame capturado pero formato inválido')
         }
-      }, 'image/jpeg', 0.9)
+      } catch (error) {
+        console.error('❌ Error convirtiendo frame a base64:', error)
+      }
     }
   }
 
