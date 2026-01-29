@@ -3155,23 +3155,6 @@ class RealAuthenticationSystem:
             print(f"Score fusionado: {fused_score.fused_score:.4f}")
             print(f"Confianza fusionada: {fused_score.confidence:.4f}")
             
-            # return RealAuthenticationResult(
-            #     attempt_id=session.attempt_id,
-            #     success=False,  # Se determinará por umbral en matching
-            #     user_id=session.user_id,
-            #     anatomical_score=individual_scores.anatomical_score,
-            #     dynamic_score=individual_scores.dynamic_score,
-            #     fused_score=fused_score.fused_score,
-            #     confidence=fused_score.confidence,
-            #     security_level=session.security_level,
-            #     authentication_mode=AuthenticationMode.VERIFICATION,
-            #     duration=session.duration,
-            #     frames_processed=session.frames_processed,
-            #     gestures_captured=session.gesture_sequence_captured,
-            #     average_quality=np.mean(session.quality_scores) if session.quality_scores else 0.0,
-            #     average_confidence=np.mean(session.confidence_scores) if session.confidence_scores else 0.0
-            # )
-            
             verification_threshold = 0.75
             verification_success = fused_score.fused_score >= verification_threshold
             

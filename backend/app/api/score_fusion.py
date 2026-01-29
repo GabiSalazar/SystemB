@@ -266,41 +266,7 @@ async def get_voting_config():
         }
     }
 
-# @router.get("/authentication-thresholds")
-# async def get_authentication_thresholds():
-#     """
-#     Obtiene los umbrales de autenticación utilizados por el sistema.
-#     Estos valores son REALES y vienen del sistema de fusión calibrado.
-#     """
-#     try:
-#         fusion_system = get_real_score_fusion_system()
-        
-#         # Obtener threshold optimizado
-#         optimal_threshold = fusion_system.optimal_threshold
-        
-#         # Los umbrales específicos
-#         verification_threshold = optimal_threshold  # Verificación 1:1
-#         identification_threshold = optimal_threshold * 1.07  # Identificación 1:N (más estricta)
-        
-#         # Pesos como thresholds de confianza
-#         anatomical_weight = fusion_system.optimal_weights.get('anatomical', 0.6)
-#         dynamic_weight = fusion_system.optimal_weights.get('dynamic', 0.4)
-        
-#         return {
-#             "status": "success",
-#             "thresholds": {
-#                 "verification": round(verification_threshold, 2),
-#                 "identification": round(identification_threshold, 2),
-#                 "anatomical_weight": round(anatomical_weight, 2),
-#                 "dynamic_weight": round(dynamic_weight, 2),
-#                 "optimal_threshold": round(optimal_threshold, 2)
-#             },
-#             "source": "real_calibrated_system",
-#             "is_trained": fusion_system.is_trained,
-#             "is_calibrated": fusion_system.is_calibrated
-#         }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 @router.get("/authentication-thresholds")
 async def get_authentication_thresholds():
     """

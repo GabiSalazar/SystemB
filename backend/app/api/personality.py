@@ -209,7 +209,7 @@ async def get_personality_profile(user_id: str):
     try:
         database = get_biometric_database()
         
-        # VERIFICAR QUE EL USUARIO EXISTE (método correcto)
+        # VERIFICAR QUE EL USUARIO EXISTE
         user_profile = database.get_user(user_id)
         if not user_profile:
             raise HTTPException(

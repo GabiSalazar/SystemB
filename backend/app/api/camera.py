@@ -56,7 +56,15 @@ async def camera_health_check():
 
 @router.get("/stats", response_model=CameraStatsResponse)
 async def get_camera_stats():
-    """Obtiene estadísticas de la cámara"""
+    """
+    Obtiene estadísticas actuales de la cámara.
+
+    Args:
+        None
+
+    Returns:
+        CameraStatsResponse
+    """
     try:
         camera_mgr = get_camera_manager()
         
@@ -77,7 +85,17 @@ async def get_camera_stats():
 
 @router.get("/config")
 async def get_camera_config():
-    """Obtiene la configuración actual de la cámara"""
+    """
+    Obtiene la configuración de la cámara
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - config (dict): configuración actual de la cámara
+    """
     try:
         camera_mgr = get_camera_manager()
         
@@ -96,7 +114,18 @@ async def get_camera_config():
 
 @router.post("/initialize")
 async def initialize_camera():
-    """Inicializa la cámara manualmente"""
+    """
+    Inicializa manualmente la cámara
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - message (str): descripción del estado de la inicialización
+            - initialized (bool): indica si la cámara quedó inicializada
+    """
     try:
         camera_mgr = get_camera_manager()
         
@@ -123,7 +152,18 @@ async def initialize_camera():
 
 @router.post("/reset")
 async def reset_camera():
-    """Reinicia la cámara"""
+    """
+    Reinicia la cámara
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - message (str): descripción del resultado
+            - initialized (bool): indica si la cámara quedó operativa
+    """
     try:
         camera_mgr = get_camera_manager()
         
@@ -143,7 +183,17 @@ async def reset_camera():
 
 @router.post("/release")
 async def release_camera_endpoint():
-    """Libera los recursos de la cámara"""
+    """
+    Libera los recursos asociados a la cámara
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - message (str): confirmación de liberación de recursos
+    """
     try:
         release_camera()
         
@@ -158,7 +208,18 @@ async def release_camera_endpoint():
 @router.get("/capture/test")
 async def capture_test_frame():
     """
-    Devuelve una imagen JPEG de prueba para validar el funcionamiento del endpoint
+    Captura un frame de prueba desde la cámara
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - frame (str): imagen codificada en base64 (JPEG)
+            - width (int): ancho del frame
+            - height (int): alto del frame
+            - frame_count (int): número total de frames capturados
     """
     try:
         camera_mgr = get_camera_manager()
@@ -193,10 +254,19 @@ async def capture_test_frame():
 @router.get("/capture/high-quality")
 async def capture_high_quality_frame():
     """
-    Captura un frame de alta calidad
-    
-    Usa estabilización y selección del mejor frame de 3 capturas.
-    """
+    Captura un frame de desde la cámara
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - frame (str): imagen codificada en base64 (JPEG)
+            - width (int): ancho del frame
+            - height (int): alto del frame
+            - quality (str): nivel de calidad del frame capturado
+        """
     try:
         camera_mgr = get_camera_manager()
         
@@ -236,10 +306,10 @@ async def get_test_image():
         # Crear imagen de prueba (640x480, gradiente de colores)
         test_image = np.zeros((480, 640, 3), dtype=np.uint8)
         
-        # Gradiente horizontal (azul a verde)
+        # Gradiente horizontal
         for x in range(640):
-            test_image[:, x, 0] = int(255 * (1 - x/640))  # Azul
-            test_image[:, x, 1] = int(255 * x/640)        # Verde
+            test_image[:, x, 0] = int(255 * (1 - x/640))
+            test_image[:, x, 1] = int(255 * x/640)
         
         # Agregar texto
         cv2.putText(test_image, "Camera Test Image", (180, 240),

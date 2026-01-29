@@ -43,7 +43,17 @@ async def config_health_check():
 
 @router.get("/system-info")
 async def get_system_info():
-    """Obtiene información completa del sistema"""
+    """
+    Obtiene información del sistema y su configuración actual
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - system_info (dict): información del sistema
+    """
     try:
         config_mgr = get_config_manager()
         system_info = config_mgr.get_system_info()
@@ -57,7 +67,17 @@ async def get_system_info():
 
 @router.get("/all")
 async def get_all_config():
-    """Obtiene toda la configuración actual"""
+    """
+    Obtiene la configuración del sistema
+
+    Args:
+        None
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - config (dict): configuración del sistema
+    """
     try:
         config_mgr = get_config_manager()
         return {
@@ -71,7 +91,16 @@ async def get_all_config():
 @router.get("/get/{key:path}", response_model=ConfigResponse)
 async def get_config_value(key: str):
     """
-    Obtiene un valor específico de configuración
+    Obtiene un valor específico de configuración a partir de su clave
+
+    Args:
+        key (str): clave de la configuración
+
+    Returns:
+        ConfigResponse:
+            - key (str): clave solicitada
+            - value (Any): valor asociado a la clave
+            - exists (bool): indica si la clave existe en la configuración
     """
     try:
         value = get_config(key)
@@ -87,13 +116,19 @@ async def get_config_value(key: str):
 @router.post("/set")
 async def set_config_value(request: ConfigUpdateRequest):
     """
-    Actualiza un valor de configuración
-    
-    Body:
-    {
-        "key": "thresholds.hand_confidence",
-        "value": 0.95
-    }
+    Actualiza un valor específico de la configuración del sistema
+
+    Args:
+        request (ConfigUpdateRequest):
+            - key (str): clave de la configuración a actualizar
+            - value (Any): nuevo valor a asignar
+
+    Returns:
+        dict:
+            - status (str): estado de la operación
+            - message (str): descripción del resultado
+            - old_value (Any): valor anterior de la configuración
+            - new_value (Any): nuevo valor asignado
     """
     try:
         config_mgr = get_config_manager()
@@ -112,7 +147,17 @@ async def set_config_value(request: ConfigUpdateRequest):
 
 @router.get("/capture-settings")
 async def get_capture_settings():
-    """Obtiene configuración de captura"""
+    """
+    Obtiene la configuración relacionada con el proceso de captura biométrica.
+
+    Returns:
+        dict:
+            - samples_per_gesture (int): número de muestras requeridas por gesto
+            - gestures_per_user (int): número de gestos requeridos por usuario
+            - total_captures (int): total de capturas necesarias en el proceso
+            - required_stable_frames (int): cantidad de frames estables requeridos
+            - capture_delay_seconds (float): retardo en segundos antes de la captura
+    """
     try:
         config_mgr = get_config_manager()
         return {
@@ -128,7 +173,18 @@ async def get_capture_settings():
 
 @router.get("/thresholds")
 async def get_thresholds():
-    """Obtiene todos los umbrales de calidad"""
+    """
+    Obtiene los umbrales de calidad utilizados en el sistema biométrico.
+
+    Returns:
+        dict:
+            - hand_confidence (float): umbral mínimo de confianza para detección de mano
+            - gesture_confidence (float): umbral mínimo de confianza del gesto reconocido
+            - movement_threshold (float): umbral de movimiento permitido durante la captura
+            - target_hand_size (float): tamaño objetivo de la mano en el frame
+            - size_tolerance (float): tolerancia permitida respecto al tamaño objetivo
+            - visibility_margin (float): margen mínimo de visibilidad requerido
+    """
     try:
         return {
             "hand_confidence": get_config('thresholds.hand_confidence'),
@@ -144,7 +200,19 @@ async def get_thresholds():
 
 @router.get("/camera-settings")
 async def get_camera_settings():
-    """Obtiene configuración de cámara"""
+    """
+    Obtiene la configuración de la cámara
+
+    Returns:
+        dict:
+            - width (int): ancho de captura de la cámara en píxeles
+            - height (int): alto de captura de la cámara en píxeles
+            - fps_target (int | float): frames por segundo objetivo
+            - autofocus (bool): indica si el autofocus está habilitado
+            - brightness (int | float): nivel de brillo configurado
+            - contrast (int | float): nivel de contraste configurado
+            - warmup_frames (int): número de frames de calentamiento antes de captura
+    """
     try:
         return {
             "width": get_config('camera.width'),
@@ -161,7 +229,14 @@ async def get_camera_settings():
 
 @router.get("/available-gestures")
 async def get_available_gestures():
-    """Obtiene lista de gestos disponibles"""
+    """
+    Obtiene la lista de gestos disponibles
+
+    Returns:
+        dict:
+            - count (int): número total de gestos disponibles
+            - gestures (list[str]): lista de nombres de gestos configurados en el sistema
+    """
     try:
         gestures = get_config('available_gestures', [])
         return {
@@ -174,7 +249,18 @@ async def get_available_gestures():
 
 @router.get("/gesture-requirements/{gesture_name}")
 async def get_gesture_requirements(gesture_name: str):
-    """Obtiene requisitos específicos de un gesto"""
+    """
+    Obtiene los requisitos específicos asociados a un gesto biométrico.
+
+    Args:
+        gesture_name (str): nombre del gesto a consultar
+
+    Returns:
+        dict:
+            - gesture_name (str): nombre del gesto consultado
+            - requirements (dict): requisitos configurados para el gesto
+            - area_config (dict): configuración del área de referencia asociada al gesto
+    """
     try:
         config_mgr = get_config_manager()
         requirements = config_mgr.get_gesture_requirements(gesture_name)
@@ -195,7 +281,15 @@ async def get_gesture_requirements(gesture_name: str):
 
 @router.post("/backup")
 async def create_backup():
-    """Crea un backup de la configuración actual"""
+    """
+    Crea un respaldo de la configuración actual del sistema
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - message (str): mensaje descriptivo del resultado
+            - backup_file (str): ruta o nombre del archivo de respaldo generado
+    """
     try:
         config_mgr = get_config_manager()
         backup_file = config_mgr.backup_config()
@@ -214,7 +308,15 @@ async def create_backup():
 
 @router.post("/save")
 async def save_config():
-    """Guarda la configuración actual en el archivo"""
+    """
+    Guarda la configuración actual en el archivo de configuración persistente
+
+    Returns:
+        dict:
+            - status (str): resultado de la operación
+            - message (str): mensaje descriptivo del resultado
+            - config_file (str): ruta del archivo de configuración guardado
+    """
     try:
         config_mgr = get_config_manager()
         config_mgr.save_config()

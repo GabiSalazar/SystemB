@@ -1,5 +1,5 @@
 """
-API para comunicación con el Plugin (Plugin - Sistema Biométrico).
+API para comunicación con el Plugin (Plugin - Sistema Biométrico)
 """
 
 from fastapi import APIRouter, HTTPException, Header

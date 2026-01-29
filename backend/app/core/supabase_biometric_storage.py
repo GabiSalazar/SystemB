@@ -16,6 +16,16 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import threading
 import warnings
+import base64
+from pathlib import Path
+
+# Cifrado AES-256
+try:
+    from cryptography.fernet import Fernet
+    CRYPTO_AVAILABLE = True
+except ImportError:
+    CRYPTO_AVAILABLE = False
+    print("WARNING: cryptography no disponible - metadata sin cifrar")
 
 # Supabase client
 from app.core.supabase_client import get_supabase_client
@@ -608,15 +618,133 @@ class BiometricDatabase:
         )
         
         # LOCK Y CACHE
+        # self.lock = threading.RLock()
+        # self.cache = {}
+        # self.stats = DatabaseStats()
+        
+        # # CARGAR DATOS DESDE SUPABASE
+        # self._load_database()
+
+        # LOCK Y CACHE
         self.lock = threading.RLock()
         self.cache = {}
         self.stats = DatabaseStats()
+        
+        # SISTEMA DE CIFRADO
+        self.encryption_enabled = self.config.get('encryption_enabled', True)
+        self.cipher_key = None
+        self.cipher = None
+        
+        if self.encryption_enabled and CRYPTO_AVAILABLE:
+            self._initialize_encryption_keys()
+        else:
+            if self.encryption_enabled and not CRYPTO_AVAILABLE:
+                print("WARNING: Cifrado solicitado pero cryptography no disponible")
+                print("WARNING: Metadata se guardara SIN CIFRAR")
+                self.encryption_enabled = False
         
         # CARGAR DATOS DESDE SUPABASE
         self._load_database()
         
         print(f"BiometricDatabase inicializada con Supabase")
     
+    # ========================================================================
+    # MÉTODOS DE CIFRADO
+    # ========================================================================
+    
+    def _initialize_encryption_keys(self):
+        """Inicializa o carga claves de cifrado AES-256."""
+        try:
+            keys_dir = Path('biometric_data') / 'keys'
+            keys_dir.mkdir(parents=True, exist_ok=True)
+            
+            key_file = keys_dir / 'encryption_key.key'
+            
+            if key_file.exists():
+                with open(key_file, 'rb') as f:
+                    self.cipher_key = f.read()
+                print(f"Clave de cifrado cargada desde {key_file}")
+            else:
+                self.cipher_key = Fernet.generate_key()
+                
+                with open(key_file, 'wb') as f:
+                    f.write(self.cipher_key)
+                
+                print("=" * 80)
+                print("NUEVA CLAVE DE CIFRADO GENERADA")
+                print(f"Ubicacion: {key_file.absolute()}")
+                print("CRITICO: Respalda este archivo inmediatamente")
+                print("Sin esta clave NO podras descifrar los templates")
+                print("=" * 80)
+            
+            self.cipher = Fernet(self.cipher_key)
+            print("Sistema de cifrado inicializado correctamente")
+            
+        except Exception as e:
+            print(f"Error inicializando cifrado: {e}")
+            self.encryption_enabled = False
+            self.cipher = None
+
+    def _encrypt_metadata(self, metadata: dict):
+        """
+        Cifra metadata SOLO si cifrado esta habilitado.
+        Retorna string cifrado o dict sin cambios.
+        """
+        if not self.encryption_enabled or not self.cipher:
+            return metadata
+        
+        try:
+            json_str = json.dumps(metadata, default=str)
+            json_bytes = json_str.encode('utf-8')
+            encrypted_bytes = self.cipher.encrypt(json_bytes)
+            encrypted_b64 = base64.b64encode(encrypted_bytes).decode('utf-8')
+            
+            print(f"  Metadata cifrada: {len(metadata)} keys -> {len(encrypted_b64)} chars")
+            return encrypted_b64
+            
+        except Exception as e:
+            print(f"  Error cifrando metadata: {e}")
+            print(f"  Guardando metadata SIN CIFRAR como fallback")
+            return metadata
+    
+    def _decrypt_metadata(self, metadata_field):
+        """
+        Descifra metadata CON BACKWARD COMPATIBILITY automatica.
+        Retorna dict con metadata descifrada o sin modificar.
+        """
+        # CASO 1: Ya es dict (formato viejo, sin cifrar)
+        if isinstance(metadata_field, dict):
+            return metadata_field
+        
+        # CASO 2: Es None o vacio
+        if not metadata_field:
+            return {}
+        
+        # CASO 3: Es string (formato nuevo, cifrado)
+        if isinstance(metadata_field, str):
+            if not self.encryption_enabled or not self.cipher:
+                print(f"  WARNING: Metadata cifrada pero cifrado deshabilitado")
+                return {}
+            
+            try:
+                encrypted_bytes = base64.b64decode(metadata_field)
+                decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
+                json_str = decrypted_bytes.decode('utf-8')
+                metadata_dict = json.loads(json_str)
+                
+                print(f"  Metadata descifrada: {len(metadata_dict)} keys")
+                return metadata_dict
+                
+            except Exception as e:
+                print(f"  Error descifrando metadata: {e}")
+                print(f"  Retornando metadata vacia por seguridad")
+                return {}
+        
+        # CASO 4: Tipo desconocido
+        print(f"  WARNING: Metadata con tipo desconocido: {type(metadata_field)}")
+        return {}
+
+
     # ========================================================================
     # MÉTODOS DE CONFIGURACIÓN
     # ========================================================================
@@ -634,7 +762,7 @@ class BiometricDatabase:
         }
         
         config = get_config('biometric.database', default_config)
-        config['encryption_enabled'] = False
+        config['encryption_enabled'] = True
         config['debug_mode'] = True
         
         print(f"CONFIG: Encriptación = {config['encryption_enabled']}")
@@ -987,7 +1115,7 @@ class BiometricDatabase:
                         success_count=template_data.get('success_count', 0),
                         is_encrypted=False,
                         checksum=template_data.get('checksum', ''),
-                        metadata=template_data.get('metadata', {})
+                        metadata=self._decrypt_metadata(template_data.get('metadata', {}))
                     )
                     
                     # Guardar en memoria
@@ -2222,7 +2350,7 @@ class BiometricDatabase:
                         success_count=template_data.get('success_count', 0),
                         is_encrypted=False,
                         checksum=template_data.get('checksum', ''),
-                        metadata=template_data.get('metadata', {})
+                        metadata=self._decrypt_metadata(template_data.get('metadata', {}))
                     )
                     
                     templates.append(template)
@@ -3379,9 +3507,9 @@ class BiometricDatabase:
                 'last_used': last_used,
                 'verification_count': getattr(template, 'verification_count', 0),
                 'success_count': getattr(template, 'success_count', 0),
-                'is_encrypted': False,
+                'is_encrypted': self.encryption_enabled,
                 'checksum': getattr(template, 'checksum', ''),
-                'metadata': getattr(template, 'metadata', {})
+                'metadata': self._encrypt_metadata(getattr(template, 'metadata', {}))
             }
             
             # DIAGNOSTICO: Verificar template_data antes de enviar
@@ -3406,20 +3534,18 @@ class BiometricDatabase:
             print("="*80)
             print("DEBUG EN _save_template() - ANTES DE UPSERT")
             print("="*80)
-            print(f"template_data['metadata'] keys: {list(template_data['metadata'].keys())}")
-
-            if 'bootstrap_features' in template_data['metadata']:
-                bf = template_data['metadata']['bootstrap_features']
-                print(f"✓ bootstrap_features en template_data['metadata']")
-                print(f"  Longitud: {len(bf)}")
+            
+            # Metadata puede ser string (cifrado) o dict (sin cifrar)
+            metadata_value = template_data['metadata']
+            if isinstance(metadata_value, str):
+                print(f"Metadata CIFRADA: {len(metadata_value)} caracteres")
+                print(f"Primeros 50 chars: {metadata_value[:50]}...")
+            elif isinstance(metadata_value, dict):
+                print(f"Metadata SIN CIFRAR: {list(metadata_value.keys())}")
+                if 'bootstrap_features' in metadata_value:
+                    print(f"  bootstrap_features: {len(metadata_value['bootstrap_features'])} elementos")
             else:
-                print(f"✗ bootstrap_features NO en template_data['metadata']")
-                print(f"  Keys disponibles: {list(template_data['metadata'].keys())}")
-
-            # Calcular tamaño del JSON
-            import json
-            metadata_json = json.dumps(template_data['metadata'])
-            print(f"Tamaño metadata JSON: {len(metadata_json)} bytes ({len(metadata_json)/1024:.2f} KB)")
+                print(f"Metadata tipo desconocido: {type(metadata_value)}")
             print("="*80)
 
             # UPSERT EN SUPABASE
@@ -3463,22 +3589,20 @@ class BiometricDatabase:
                     saved_metadata = saved_template.get('metadata', {})
                     
                     print(f"Template recuperado de Supabase:")
-                    print(f"  Metadata keys guardados: {list(saved_metadata.keys())}")
                     
-                    if 'bootstrap_features' in saved_metadata:
-                        bf_saved = saved_metadata['bootstrap_features']
-                        print(f"  ✓✓✓ bootstrap_features SÍ SE GUARDÓ EN SUPABASE")
-                        print(f"      Longitud: {len(bf_saved)}")
-                        print(f"      Primeros 5: {bf_saved[:5]}")
+                    # Metadata puede ser string (cifrado) o dict
+                    if isinstance(saved_metadata, str):
+                        print(f"  Metadata CIFRADA guardada: {len(saved_metadata)} caracteres")
+                    elif isinstance(saved_metadata, dict):
+                        print(f"  Metadata keys guardados: {list(saved_metadata.keys())}")
+                        if 'bootstrap_features' in saved_metadata:
+                            bf_saved = saved_metadata['bootstrap_features']
+                            print(f"    bootstrap_features: {len(bf_saved)} elementos")
+                        if 'temporal_sequence' in saved_metadata:
+                            ts_saved = saved_metadata['temporal_sequence']
+                            print(f"    temporal_sequence: {len(ts_saved)} frames")
                     else:
-                        print(f"  ✗✗✗ bootstrap_features NO SE GUARDÓ EN SUPABASE")
-                        print(f"      Keys guardados: {list(saved_metadata.keys())}")
-                    
-                    if 'temporal_sequence' in saved_metadata:
-                        ts_saved = saved_metadata['temporal_sequence']
-                        print(f"  ✓ temporal_sequence SÍ se guardó ({len(ts_saved)} frames)")
-                    else:
-                        print(f"  ✗ temporal_sequence NO se guardó")
+                        print(f"  Metadata tipo: {type(saved_metadata)}")
                         
                 else:
                     print(f"  ✗✗✗ NO SE PUDO RECUPERAR EL TEMPLATE DE SUPABASE")
@@ -3629,7 +3753,7 @@ class BiometricDatabase:
             'total_templates': len(self.templates),
             'anatomical_templates': len([t for t in self.templates.values() if t.anatomical_embedding is not None]),
             'dynamic_templates': len([t for t in self.templates.values() if t.dynamic_embedding is not None]),
-            'encryption_enabled': False,
+            'encryption_enabled': self.encryption_enabled,
             'search_strategy': self.config['search_strategy'],
             'integrity_status': 'OK'
         }

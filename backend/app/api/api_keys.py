@@ -1,7 +1,7 @@
 """
 API endpoints para gestión de API Keys
 
-Permite generar, regenerar, validar y consultar estadísticas de API Keys para la comunicación entre el Plugin y el Sistema biométrico.
+Permite generar, regenerar, validar y consultar estadísticas de API Keys para la comunicación entre el Plugin y el Sistema biométrico
 """
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
